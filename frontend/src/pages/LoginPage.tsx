@@ -16,7 +16,8 @@ function LoginPage() {
     const js = JSON.stringify(obj);
 
     try {
-      const response = await fetch('http://localhost:5000/api/login', {
+      const API_URL = import.meta.env.VITE_API_URL;
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         body: js,
         headers: { 'Content-Type': 'application/json' }
@@ -37,7 +38,21 @@ function LoginPage() {
         window.location.href = '/dashboard';
       }
     } catch (error: any) {
-      setMessage('Error: ' + error.toString());
+      // TEMPORARY TEST LOGIN - Remove this after backend is connected
+      console.log('Backend not responding, using temporary test login');
+      
+      if (loginName && loginPassword) {
+        const user = {
+          firstName: 'Test',
+          lastName: 'User',
+          id: 1
+        };
+        localStorage.setItem('user_data', JSON.stringify(user));
+        setMessage('');
+        window.location.href = '/dashboard';
+      } else {
+        setMessage('Please enter username and password');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -70,6 +85,13 @@ function LoginPage() {
         </form>
 
         {message && <div className="error-message">{message}</div>}
+        
+        {/* TEMPORARY - Remove this after backend is connected */}
+        <div className="temp-test-notice">
+          <p style={{ fontSize: '12px', color: '#999', marginTop: '15px', textAlign: 'center' }}>
+            ⚠️ Temporary Test Mode: Enter any username/password ⚠️
+          </p>
+        </div>
       </div>
     </div>
   );

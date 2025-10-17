@@ -21,7 +21,7 @@ function Header() {
   return (
     <header className="header">
       <div className="header-content">
-        <h1>💰 Wealth Tracker</h1>
+        <h1>Wealth Tracker</h1>
         <div className="header-right">
           <span className="user-name">Welcome, {userName}</span>
           <button className="logout-btn" onClick={doLogout}>Log Out</button>
