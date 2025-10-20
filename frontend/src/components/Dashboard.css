@@ -2,7 +2,7 @@
 
 .dashboard-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 20px;
@@ -61,10 +61,24 @@
   font-size: 20px;
   cursor: pointer;
   transition: transform 0.2s;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
 }
 
 .icon-btn:hover {
   transform: scale(1.1);
+}
+
+.icon-img {
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  object-fit: contain;
 }
 
 .sidebar-nav {
@@ -102,6 +116,9 @@
   flex-direction: column;
   padding: 30px;
   position: relative;
+  background: none;
+  border-radius: 15px;
+  overflow-y: auto;
 }
 
 .content-header {
@@ -113,13 +130,13 @@
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .content-header h1 {
   font-size: 32px;
   color: #333;
   margin: 0;
-  
 }
 
 .content-header p {
@@ -127,8 +144,8 @@
   color: #999;
   margin: 0;
   position: absolute;
-  left: 40rem;
-  top: 73px;
+  left: 60px;
+  top: 50px;
 }
 
 .profile-btn {
@@ -165,7 +182,7 @@
   border-radius: 15px;
   padding: 25px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  border: 2px solid #b1b1b1;
+  border: 2px solid #e0e0e0;
 }
 
 .dashboard-card h3 {

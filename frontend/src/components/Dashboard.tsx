@@ -1,5 +1,6 @@
 // Dashboard.tsx - Main dashboard with sidebar and content layout
 import { useState, useEffect } from 'react';
+import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import './Dashboard.css';
 
 function Dashboard() {
@@ -45,8 +46,12 @@ function Dashboard() {
         </div>
 
         <div className="sidebar-icons">
-          <button className="icon-btn">🔔</button>
-          <button className="icon-btn">⚙️</button>
+          <button className="icon-btn">
+            <img src="/images/bell.png" alt="Notifications" className="icon-img" />
+          </button>
+          <button className="icon-btn">
+            <img src="/images/settings.png" alt="Settings" className="icon-img" />
+          </button>
         </div>
 
         <nav className="sidebar-nav">
@@ -86,8 +91,8 @@ function Dashboard() {
       {/* Main Content */}
       <main className="main-content">
         <div className="content-header">
-          <h1>Dashboard</h1>
-          <p className="page-title">[Name]</p>
+          <h1>Hello [Name]!!</h1>
+          <p className="page-title">Dashboard</p>
           <button className="profile-btn">👤</button>
         </div>
 
@@ -105,6 +110,50 @@ function Dashboard() {
 
 // Dashboard Content Component
 function DashboardContent({ user }: { user: any }) {
+  const [categoryData, setCategoryData] = useState<any[]>([]);
+
+  // Colors for each category
+  const COLORS = {
+    'Savings': '#FFD700',
+    'Living': '#4A90E2',
+    'Hobbies': '#FF8C42',
+    'Gambling': '#999999'
+  };
+
+  useEffect(() => {
+    fetchCategoryData();
+  }, []);
+
+  async function fetchCategoryData() {
+    try {
+      const userData = localStorage.getItem('user_data');
+      if (!userData) return;
+
+      const userParsed = JSON.parse(userData);
+      const API_URL = import.meta.env.VITE_API_URL;
+      
+      const response = await fetch(`${API_URL}/api/analytics/categories`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: userParsed.id, accountId: null }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const res = await response.json();
+      if (!res.error) {
+        setCategoryData(res.categories || []);
+      }
+    } catch (error) {
+      console.log('Using sample data for dashboard');
+      // Sample data for testing
+      setCategoryData([
+        { name: 'Savings', value: 1200 },
+        { name: 'Living', value: 1500 },
+        { name: 'Hobbies', value: 200 },
+        { name: 'Gambling', value: 100 }
+      ]);
+    }
+  }
+
   return (
     <div className="dashboard-grid">
       {/* Accounts Section */}
@@ -129,8 +178,23 @@ function DashboardContent({ user }: { user: any }) {
       {/* Monthly Breakdown Section */}
       <div className="dashboard-card breakdown-card">
         <h3>MONTHLY BREAKDOWN</h3>
-        <div className="placeholder-chart">
-          <p>Pie Chart Placeholder</p>
+        <div className="chart-container">
+          <PieChart width={280} height={200}>
+            <Pie
+              data={categoryData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {categoryData.map((entry: any, index: number) => (
+                <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value: number) => `${value.toFixed(2)}`} />
+          </PieChart>
         </div>
         <div className="chart-legend">
           <div className="legend-item">
