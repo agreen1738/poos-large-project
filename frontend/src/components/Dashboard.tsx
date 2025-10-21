@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import './Dashboard.css';
+import Transactions from './Transactions';
+import Analytics from './Analytics';
 
 function Dashboard() {
   const [user, setUser] = useState<any>(null);
@@ -24,11 +26,11 @@ function Dashboard() {
       case 'dashboard':
         return <DashboardContent user={user} />;
       case 'transactions':
-        return <TransactionsContent />;
+        return <Transactions />;
       case 'accounts':
         return <AccountsContent />;
       case 'analytics':
-        return <AnalyticsContent />;
+        return <Analytics />;
       case 'settings':
         return <SettingsContent />;
       default:
