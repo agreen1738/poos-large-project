@@ -22,6 +22,6 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Backend is running!');
 });
 
-app.use('/api/auth', auth_routes);
+app.use('/api', auth_routes);
 
 export default app;
