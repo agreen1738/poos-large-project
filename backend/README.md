@@ -8,8 +8,15 @@ This document serve as a guide towards succesfully running the backend.
 ├── /node_modules
 ├── /src
 │   ├── /middlewares
+│   │   └── authMiddleware.ts
+│   ├── /models
+│   │   ├── Accounts.ts
+│   │   ├── Transactions.ts
+│   │   └── User.ts
 │   ├── /routes
-│   │   └── auth.ts
+│   │   └── authRoutes.ts
+│   ├── /types
+│   │   └── express.d.ts
 │   ├── app.ts
 │   ├── database.ts
 │   └── server.ts

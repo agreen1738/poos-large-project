@@ -1,8 +1,8 @@
 {
-    "name": "backend",
+    "name": "wealth-tracker-backend",
     "version": "1.0.0",
     "type": "module",
-    "description": "",
+    "description": "API for wealth tracker app",
     "main": "server.js",
     "dependencies": {
         "bcrypt": "^6.0.0",
