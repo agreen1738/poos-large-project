@@ -5,6 +5,14 @@ import './Dashboard.css';
 import Transactions from './Transactions';
 import Analytics from './Analytics';
 
+interface Transaction {
+  id: number;
+  date: string;
+  name: string;
+  amount: number;
+  category: string;
+}
+
 function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [activePage, setActivePage] = useState('dashboard');
