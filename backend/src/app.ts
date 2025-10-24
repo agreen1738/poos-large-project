@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import auth_routes from './routes/auth.ts';
+import authRoutes from './routes/authRoutes.js';
+import accountRoutes from './routes/accountRoutes.js';
+import authenticateToken from './middleware/authMiddleware.js';
 import type { Response, Request, NextFunction } from 'express';
 
 const app = express();
@@ -22,6 +24,7 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Backend is running!');
 });
 
-app.use('/api', auth_routes);
+app.use('/api', authRoutes);
+app.use('/api', authenticateToken, accountRoutes);
 
 export default app;
