@@ -7,7 +7,7 @@ let client: MongoClient | null = null;
 let database: Db;
 let DB_NAME = process.env.MONGO_DB_NAME;
 
-export async function connect_db(uri: string) {
+export async function connectDB(uri: string) {
     if (client) {
         console.log('Already connected to MongoDB');
         return;
@@ -19,7 +19,7 @@ export async function connect_db(uri: string) {
     console.log('Connected to MongoDB');
 }
 
-export function get_db(): Db {
+export function getDB(): Db {
     if (!database) {
         throw new Error('Database is not initialized');
     }
@@ -27,7 +27,7 @@ export function get_db(): Db {
     return database;
 }
 
-export async function disconnect_db() {
+export async function disconnectDB() {
     if (!client) {
         console.log('Not connected to MongoDB');
         return;
