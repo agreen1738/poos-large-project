@@ -7,16 +7,21 @@ This document serve as a guide towards succesfully running the backend.
 ```
 ├── /node_modules
 ├── /src
-│   ├── /middlewares
+│   ├── /controllers
+│   │   ├── accountController.ts
+│   │   └── authController.ts
+│   ├── /middleware
 │   │   └── authMiddleware.ts
 │   ├── /models
 │   │   ├── Accounts.ts
-│   │   ├── Transactions.ts
 │   │   └── User.ts
 │   ├── /routes
+│   │   ├── accountRoutes.ts
 │   │   └── authRoutes.ts
 │   ├── /types
 │   │   └── express.d.ts
+│   ├── /utils
+│   │   └── messageHandler.ts
 │   ├── app.ts
 │   ├── database.ts
 │   └── server.ts
@@ -29,7 +34,7 @@ This document serve as a guide towards succesfully running the backend.
 └── tsconfig.json
 ```
 
-## Dependecies
+## Dependencies
 
 The backend uses **Express.js** to develop the program's API, **MongoDB** as the database, and **TypeScript** for type safety and improved developer experience.
 
