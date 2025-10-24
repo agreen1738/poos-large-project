@@ -6,6 +6,7 @@ This document serve as a guide towards succesfully running the backend.
 
 ```
 ├── /node_modules
+├── /dist
 ├── /src
 │   ├── /controllers
 │   │   ├── accountController.ts
@@ -25,6 +26,7 @@ This document serve as a guide towards succesfully running the backend.
 │   ├── app.ts
 │   ├── database.ts
 │   └── server.ts
+├── /tests
 ├── .env
 ├── .gitignore
 ├── .prettierrc
