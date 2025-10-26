@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import './Dashboard.css';
 import Transactions from './Transactions';
 import Analytics from './Analytics';
+import Settings from './Settings';
 
 interface Transaction {
   id: number;
@@ -59,7 +60,7 @@ function Dashboard() {
           <button className="icon-btn">
             <img src="/images/bell.png" alt="Notifications" className="icon-img" />
           </button>
-          <button className="icon-btn">
+          <button className="icon-btn" onClick={() => setActivePage('settings')}>
             <img src="/images/settings.png" alt="Settings" className="icon-img" />
           </button>
         </div>
@@ -444,12 +445,7 @@ function AnalyticsContent() {
 }
 
 function SettingsContent() {
-  return (
-    <div className="content-section">
-      <h2>Settings</h2>
-      <p>Settings page content coming soon...</p>
-    </div>
-  );
+  return <Settings />;
 }
 
 export default Dashboard;
