@@ -92,6 +92,10 @@ function LoginPage() {
             ⚠️ Temporary Test Mode: Enter any username/password ⚠️
           </p>
         </div>
+
+        <div className="register-link">
+          <p>Don't have an account? <a href="/register">Create one here</a></p>
+        </div>
       </div>
     </div>
   );
