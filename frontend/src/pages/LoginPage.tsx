@@ -79,6 +79,11 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          
+          <div className="form-footer">
+            <a href="/forgot-password" className="forgot-password-link">Forgot Password?</a>
+          </div>
+          
           <button type="submit" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
