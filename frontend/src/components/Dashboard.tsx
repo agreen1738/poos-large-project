@@ -5,6 +5,7 @@ import './Dashboard.css';
 import Transactions from './Transactions';
 import Analytics from './Analytics';
 import Settings from './Settings';
+import Accounts from './Accounts';
 
 interface Transaction {
   id: number;
@@ -37,7 +38,7 @@ function Dashboard() {
       case 'transactions':
         return <Transactions />;
       case 'accounts':
-        return <AccountsContent />;
+        return <Accounts />;
       case 'analytics':
         return <Analytics />;
       case 'settings':
