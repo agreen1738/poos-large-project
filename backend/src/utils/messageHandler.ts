@@ -7,8 +7,11 @@ interface MessageInterface {
 
 const Messages = {
     USER: 'user ',
+    USERS: 'users ',
     ACCOUNT: 'account ',
+    ACCOUNTS: 'accounts ',
     TRANSACTION: 'transaction ',
+    TRANSACTIONS: 'transactions ',
     CREATED: 'created successfully',
     UPDATED: 'updated successfully',
     DELETED: 'deleted successfully',
@@ -22,6 +25,17 @@ const Messages = {
     INVALID_ACCOUNT: 'invalid account name',
     NAME_TAKEN: 'name is taken. try another',
     FAILED: 'request failed. try again',
+
+    AUTH_FAILED: 'authentication required: no token provided',
+    INVALID_TOKEN: 'invalid token',
+    VERIFICATION_SENT: 'verification email already sent. check email inbox',
+    MISSING_TOKEN: 'missing verification token',
+    EXPIRED_TOKEN: 'verification link expired',
+    ALREADY_VERIFIED: 'account is already verified',
+    EMAIL_VERIFIED: 'email verified successfully',
+    NOT_VERIFIED: 'email is not verified. please verify before loggin in',
+    RE_VERIFICATION: 'a new verification email has been sent',
+    NEW_PASSWORD: 'password changed successfully',
 } as const;
 
 function errorResponse(res: Response, error: MessageInterface) {
@@ -55,6 +69,10 @@ function internalServerError(res: Response, error: any) {
     errorResponse(res, { status: 500, message: Messages.INTERNAL_ERROR });
 }
 
+function okStatus(res: Response, message: string) {
+    successResponse(res, { status: 200, message: message });
+}
+
 function created(res: Response, message: string) {
     successResponse(res, { status: 201, message: message });
 }
@@ -67,4 +85,20 @@ function updated(res: Response, message: string) {
     successResponse(res, { status: 204, message: message });
 }
 
-export { Messages, badRequest, unauthorized, forbiden, notFound, internalServerError, created, deleted, updated };
+function retrieved(res: Response, message: string) {
+    successResponse(res, { status: 200, message: message });
+}
+
+export {
+    Messages,
+    badRequest,
+    unauthorized,
+    forbiden,
+    notFound,
+    internalServerError,
+    created,
+    deleted,
+    updated,
+    retrieved,
+    okStatus,
+};
