@@ -22,9 +22,7 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify your account', isResend = false) {
-    const verificationToken = jwt.sign({ id: id.toString(), email: user.email }, JWT_SECRET, {
-        expiresIn: '15m',
-    });
+    const verificationToken = jwt.sign({ id: id.toString() }, JWT_SECRET, { expiresIn: '15m' });
     const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${verificationToken}`;
     const emailSubject = isResend ? `Resend: ${subject}` : subject;
     const message = `
@@ -32,6 +30,24 @@ async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify 
         <p>${isResend ? 'It looks like you requested a new verification link.' : 'Thanks for signing up!'}</p>
         <p>Click the link below to verify your account:</p>
         <a href="${verificationLink}">Verify Account</a>
+        <p>This link will expire in 15 minutes.</p>
+    `;
+    await transporter.sendMail({
+        from: `'WealthTracker' <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: emailSubject,
+        html: message,
+    });
+}
+
+async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
+    const passwordResetLink = `${process.env.FRONTEND_URL}/forgot-password?token=${resetToken}`;
+    const emailSubject = 'Reset Password';
+    const message = `
+        <h2>Hi ${user.name},</h2>
+        <p>'It looks like you are attempting to reset your password.</p>
+        <p>Click the link below to reset your password:</p>
+        <a href="${passwordResetLink}">Verify Account</a>
         <p>This link will expire in 15 minutes.</p>
     `;
     await transporter.sendMail({
@@ -176,7 +192,10 @@ async function forgotPassword(req: Request, res: Response) {
 
         if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
 
-        return res.status(200).json({ id: user._id.toString() });
+        const resetToken = jwt.sign({ id: user._id.toString() }, JWT_SECRET, { expiresIn: '15m' });
+        await sendPasswordRecoveryEmail(user, resetToken);
+
+        return res.status(200).json({ token: resetToken });
     } catch (error) {
         return internalServerError(res, error);
     }
@@ -185,22 +204,23 @@ async function forgotPassword(req: Request, res: Response) {
 async function changePassword(req: Request, res: Response) {
     try {
         const bodyLength = Object.keys(req.body).length;
-        const paramLength = Object.keys(req.params).length;
+        const paramLength = Object.keys(req.body).length;
 
         if (bodyLength !== 1 || paramLength !== 1) {
             return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
         }
 
-        const userId = req.params.id;
+        const token = req.params.token;
         const password = req.body.password;
 
-        if (!userId || !password) return badRequest(res, Messages.MISSING_FIELDS);
+        if (!token || !password) return badRequest(res, Messages.MISSING_FIELDS);
 
+        const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string };
         const passwordHash = await bcrypt.hash(password, 10);
 
         const database = getDB();
         const collection = await database.collection('User');
-        await collection.updateOne({ _id: new ObjectId(userId) }, { $set: { passwordHash } });
+        await collection.updateOne({ _id: new ObjectId(decoded.id) }, { $set: { passwordHash } });
 
         return okStatus(res, Messages.NEW_PASSWORD);
     } catch (error) {
