@@ -3,8 +3,8 @@ import type { ObjectId } from 'mongodb';
 export interface Transactions {
     _id?: ObjectId;
     userId?: ObjectId;
-    accountID?: ObjectId;
-    amount: string;
+    accountId?: ObjectId;
+    amount: number;
     currency: string;
     category: string;
     type: string;

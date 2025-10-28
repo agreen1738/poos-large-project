@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import app from './app.js';
 import { connectDB } from './database.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const port = process.env.PORT || 5000;
 const mongo_uri = process.env.MONGO_URI;
