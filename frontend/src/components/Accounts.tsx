@@ -1,5 +1,6 @@
 // Accounts.tsx - Accounts page with add account functionality
 import { useState, useEffect } from 'react';
+import accountService from '../services/accountService';
 import './Accounts.css';
 
 interface Account {

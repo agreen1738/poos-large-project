@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import authService from '../services/authService';
 import './RegisterPage.css';
 
 interface FormErrors {
