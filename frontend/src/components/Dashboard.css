@@ -1,8 +1,6 @@
-/* Dashboard.css - Complete styling for dashboard layout */
-
 .dashboard-container {
   display: flex;
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   padding: 20px;
@@ -61,10 +59,29 @@
   font-size: 20px;
   cursor: pointer;
   transition: transform 0.2s;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  outline: none;
 }
 
 .icon-btn:hover {
   transform: scale(1.1);
+}
+
+.icon-btn:focus {
+  outline: none;
+}
+
+.icon-img {
+  width: 24px;
+  height: 24px;
+  max-width: 24px;
+  max-height: 24px;
+  object-fit: contain;
 }
 
 .sidebar-nav {
@@ -102,6 +119,9 @@
   flex-direction: column;
   padding: 30px;
   position: relative;
+  background: none;
+  border-radius: 15px;
+  overflow-y: auto;
 }
 
 .content-header {
@@ -113,13 +133,13 @@
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .content-header h1 {
   font-size: 32px;
   color: #333;
   margin: 0;
-  
 }
 
 .content-header p {
@@ -127,8 +147,8 @@
   color: #999;
   margin: 0;
   position: absolute;
-  left: 40rem;
-  top: 73px;
+  left: 60px;
+  top: 50px;
 }
 
 .profile-btn {
@@ -165,7 +185,7 @@
   border-radius: 15px;
   padding: 25px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  border: 2px solid #b1b1b1;
+  border: 2px solid #e0e0e0;
 }
 
 .dashboard-card h3 {
@@ -206,7 +226,6 @@
   color: #333;
 }
 
-/* Breakdown Card */
 .breakdown-card {
   grid-row: span 1;
 }
@@ -244,24 +263,278 @@
   border-radius: 2px;
 }
 
-/* Upcoming Card */
 .upcoming-card {
   grid-row: span 1;
 }
 
-.placeholder-calendar {
-  background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  height: 200px;
+.calendar-with-sidebar {
+  display: flex;
+  gap: 15px;
+  position: relative;
+}
+
+.mini-calendar {
+  flex: 1;
+  min-width: 0;
+}
+
+.calendar-header-mini {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  width: 275px;
+}
+
+.calendar-header-mini h4 {
+  margin: 0;
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.calendar-nav-btn-mini {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #667eea;
+  cursor: pointer;
+  padding: 5px 8px;
+  transition: transform 0.2s;
+}
+
+.calendar-nav-btn-mini:hover {
+  transform: scale(1.2);
+}
+
+.calendar-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(7, 35px);
+  gap: 5px;
+  justify-content: start;
+}
+
+.calendar-weekday-mini {
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+  font-size: 10px;
+  padding: 5px 0px;
+  border-bottom: 1px solid #f0f0f0;
+  max-width: 35px;
+}
+
+.calendar-day-mini {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  padding: 2px;
+  background: #f8f8f8;
+  font-size: 10px;
+  max-height: 35px;
+}
+
+.calendar-day-mini.empty {
+  background: transparent;
+  cursor: default;
+}
+
+.calendar-day-mini:not(.empty):hover {
+  background: #e8e8ff;
+  transform: scale(1.05);
+}
+
+.calendar-day-mini.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.calendar-day-mini.has-transactions {
+  background: #fff3cd;
+  border: 2px solid #ffc107;
+}
+
+.calendar-day-mini.has-transactions.selected {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 2px solid #764ba2;
+}
+
+.day-number-mini {
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.transaction-indicator-mini {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  background: #667eea;
+  color: white;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #999;
-  font-size: 14px;
+  font-size: 7px;
+  font-weight: 700;
 }
 
-/* Transactions Card */
+.calendar-day-mini.selected .transaction-indicator-mini {
+  background: white;
+  color: #667eea;
+}
+
+.transactions-sidebar-mini {
+  width: 180px;
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.transactions-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ddd;
+}
+
+.transactions-sidebar-header h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.close-sidebar-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.close-sidebar-btn:hover {
+  color: #667eea;
+}
+
+.transactions-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 240px;
+}
+
+.transaction-item-mini {
+  background: white;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.transaction-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.transaction-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.category-tag-mini {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.category-tag-mini.category-savings {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.category-tag-mini.category-living {
+  background: #cfe2ff;
+  color: #084298;
+}
+
+.category-tag-mini.category-hobbies {
+  background: #ffe5d0;
+  color: #cc5200;
+}
+
+.category-tag-mini.category-gambling {
+  background: #e2e3e5;
+  color: #41464b;
+}
+
+.transaction-amount-mini {
+  font-size: 11px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.no-transactions-mini {
+  text-align: center;
+  padding: 20px 10px;
+  color: #999;
+  font-size: 11px;
+}
+
+.transactions-sidebar-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.transactions-sidebar-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.transactions-sidebar-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.transactions-sidebar-list::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
 .transactions-card {
   grid-column: span 1;
 }
