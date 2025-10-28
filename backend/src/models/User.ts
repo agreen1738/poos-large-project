@@ -6,4 +6,5 @@ export interface User {
     email: string;
     passwordHash: string;
     createdAt: Date;
+    status: 'Pending' | 'Confrimed';
 }
