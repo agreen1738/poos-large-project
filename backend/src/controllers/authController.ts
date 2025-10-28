@@ -47,7 +47,7 @@ async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
         <h2>Hi ${user.name},</h2>
         <p>'It looks like you are attempting to reset your password.</p>
         <p>Click the link below to reset your password:</p>
-        <a href="${passwordResetLink}">Verify Account</a>
+        <a href="${passwordResetLink}">Reset Password</a>
         <p>This link will expire in 15 minutes.</p>
     `;
     await transporter.sendMail({
