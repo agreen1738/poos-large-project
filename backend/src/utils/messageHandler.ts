@@ -12,6 +12,8 @@ const Messages = {
     ACCOUNTS: 'accounts ',
     TRANSACTION: 'transaction ',
     TRANSACTIONS: 'transactions ',
+    BUDGET: 'budget ',
+    BUDGETS: 'budgets ',
     CREATED: 'created successfully',
     UPDATED: 'updated successfully',
     DELETED: 'deleted successfully',
@@ -25,6 +27,7 @@ const Messages = {
     INVALID_ACCOUNT: 'invalid account name',
     NAME_TAKEN: 'name is taken. try another',
     FAILED: 'request failed. try again',
+    ALREADY_EXISTS: 'already exists',
 
     AUTH_FAILED: 'authentication required: no token provided',
     INVALID_TOKEN: 'invalid token',
@@ -40,12 +43,12 @@ const Messages = {
 
 function errorResponse(res: Response, error: MessageInterface) {
     const { status = 500, message } = error;
-    return res.status(status).json({ error: message });
+    return res.status(status).json({ status: status, error: message });
 }
 
 function successResponse(res: Response, success: MessageInterface) {
     const { status = 200, message } = success;
-    return res.status(status).json({ success: message });
+    return res.status(status).json({ status: status, success: message });
 }
 
 function badRequest(res: Response, message: string) {
