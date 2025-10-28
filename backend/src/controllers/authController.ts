@@ -16,8 +16,8 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
     },
 });
 
@@ -62,11 +62,13 @@ async function register(req: Request, res: Response) {
     try {
         const bodyLength = Object.keys(req.body).length;
 
-        if (bodyLength !== 3) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
+        if (bodyLength !== 6) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
 
-        const { name, email, password } = req.body;
+        const { firstName, lastName, email, phone, password, confirmPassword } = req.body;
 
-        if (!name || !email || !password) return badRequest(res, Messages.MISSING_FIELDS);
+        if (!firstName || !lastName || !phone || !email || !password || !confirmPassword) {
+            return badRequest(res, Messages.MISSING_FIELDS);
+        }
 
         const database = getDB();
         const collection = database.collection('User');
@@ -82,8 +84,10 @@ async function register(req: Request, res: Response) {
         const passwordHash = await bcrypt.hash(password, 10);
 
         const newUser: User = {
-            name: name,
+            firstName: firstName,
+            lastName: lastName,
             email: email,
+            phone: phone,
             passwordHash: passwordHash,
             createdAt: new Date(),
             status: 'Pending',
@@ -162,7 +166,7 @@ async function resendVerification(req: Request, res: Response) {
         if (!email) return badRequest(res, Messages.MISSING_FIELDS);
 
         const database = getDB();
-        const collection = await database.collection('User');
+        const collection = database.collection('User');
         const user = await collection.findOne({ email });
 
         if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
@@ -187,7 +191,7 @@ async function forgotPassword(req: Request, res: Response) {
         if (!email) return badRequest(res, Messages.MISSING_FIELDS);
 
         const database = getDB();
-        const collection = await database.collection('User');
+        const collection = database.collection('User');
         const user = await collection.findOne({ email });
 
         if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
@@ -204,18 +208,18 @@ async function forgotPassword(req: Request, res: Response) {
 async function changePassword(req: Request, res: Response) {
     try {
         const bodyLength = Object.keys(req.body).length;
-        const paramLength = Object.keys(req.body).length;
+        const queryLength = Object.keys(req.query).length;
 
-        if (bodyLength !== 1 || paramLength !== 1) {
+        if (bodyLength !== 1 || queryLength !== 1) {
             return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
         }
 
-        const token = req.params.token;
+        const token = req.query.token;
         const password = req.body.password;
 
         if (!token || !password) return badRequest(res, Messages.MISSING_FIELDS);
 
-        const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string };
+        const decoded = jwt.verify(token as string, JWT_SECRET) as { id: string; email: string };
         const passwordHash = await bcrypt.hash(password, 10);
 
         const database = getDB();
