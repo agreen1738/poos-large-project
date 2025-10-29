@@ -5,6 +5,8 @@ export interface Accounts {
     userId?: ObjectId;
     accountName: string;
     accountType: string;
+    accountNumber: number;
+    accountInstitution: string;
     balanace: number;
     currency: string;
     isActive: boolean;
