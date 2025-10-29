@@ -25,7 +25,7 @@ const Messages = {
     INVALID_CREDENTIAL: 'invalid credentials',
     EMAIL_EXISTS: 'email already exists',
     INVALID_ACCOUNT: 'invalid account name',
-    NAME_TAKEN: 'name is taken. try another',
+    NUMBER_TAKEN: 'account number already exists',
     FAILED: 'request failed. try again',
     ALREADY_EXISTS: 'already exists',
 
@@ -81,11 +81,11 @@ function created(res: Response, message: string) {
 }
 
 function deleted(res: Response, message: string) {
-    successResponse(res, { status: 204, message: message });
+    successResponse(res, { status: 200, message: message });
 }
 
 function updated(res: Response, message: string) {
-    successResponse(res, { status: 204, message: message });
+    successResponse(res, { status: 200, message: message });
 }
 
 function retrieved(res: Response, message: string) {
