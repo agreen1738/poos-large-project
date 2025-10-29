@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { getDB } from '../database.js';
-import { badRequest, created, internalServerError, unauthorized, okStatus } from '../utils/messageHandler.js';
+import { badRequest, created, internalServerError, unauthorized, okStatus, notFound } from '../utils/messageHandler.js';
 import { Messages } from '../utils/messageHandler.js';
 import type { Request, Response } from 'express';
 import type { User } from '../models/User.js';
@@ -26,7 +26,7 @@ async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify 
     const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${verificationToken}`;
     const emailSubject = isResend ? `Resend: ${subject}` : subject;
     const message = `
-        <h2>Hi ${user.firstName} ${user.lastName},</h2>
+        <h4>Hi ${user.firstName},</h4>
         <p>${isResend ? 'It looks like you requested a new verification link.' : 'Thanks for signing up!'}</p>
         <p>Click the link below to verify your account:</p>
         <a href="${verificationLink}">Verify Account</a>
@@ -46,7 +46,7 @@ async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
     const passwordResetLink = `${process.env.FRONTEND_URL}/forgot-password?token=${resetToken}`;
     const emailSubject = 'Reset Password';
     const message = `
-        <h2>Hi ${user.firstName} ${user.lastName},</h2>
+        <h4>Hi ${user.firstName},</h4>
         <p>'It looks like you are attempting to reset your password.</p>
         <p>Click the link below to reset your password:</p>
         <a href="${passwordResetLink}">Reset Password</a>
@@ -74,6 +74,8 @@ async function register(req: Request, res: Response) {
             return badRequest(res, Messages.MISSING_FIELDS);
         }
 
+        if (password !== confirmPassword) return badRequest(res, Messages.FAILED);
+
         const database = getDB();
         const collection = database.collection('User');
         const user = await collection.findOne({ email });
@@ -99,7 +101,11 @@ async function register(req: Request, res: Response) {
 
         const result = await collection.insertOne(newUser);
 
-        await sendVerificationEmail(newUser, result.insertedId);
+        if (!result.acknowledged) return badRequest(res, Messages.USER + Messages.FAILED);
+
+        const emailResult = await sendVerificationEmail(newUser, result.insertedId);
+
+        if (!emailResult) return badRequest(res, Messages.FAILED);
 
         return created(res, Messages.USER + Messages.CREATED);
     } catch (error) {
@@ -141,15 +147,20 @@ async function verifyEmail(req: Request, res: Response) {
 
         if (!token) return badRequest(res, Messages.MISSING_TOKEN);
 
-        const decoded = jwt.verify(token as string, JWT_SECRET) as { id: string; email: string };
+        const decoded = jwt.verify(token as string, JWT_SECRET) as { id: string };
+
         const database = getDB();
         const collection = database.collection('User');
-        const user = await collection.findOne({ _id: new ObjectId(decoded.id), email: decoded.email });
+        const userId = new ObjectId(decoded.id);
+        const user = await collection.findOne({ _id: userId });
 
-        if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
+        if (!user) return notFound(res, Messages.USER + Messages.FAILED);
         if (user.status === 'Confirmed') return badRequest(res, Messages.ALREADY_VERIFIED);
 
-        await collection.updateOne({ _id: new ObjectId(decoded.id) }, { $set: { status: 'Confirmed' } });
+        const update = await collection.updateOne({ _id: userId }, { $set: { status: 'Confirmed' } });
+
+        if (!update.acknowledged) return badRequest(res, Messages.USER + Messages.FAILED);
+
         return okStatus(res, Messages.EMAIL_VERIFIED);
     } catch (error: any) {
         if (error.name === 'TokenExpiredError') {
@@ -173,10 +184,12 @@ async function resendVerification(req: Request, res: Response) {
         const collection = database.collection('User');
         const user = await collection.findOne({ email });
 
-        if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
+        if (!user) return notFound(res, Messages.USER + Messages.FAILED);
         if (user.status === 'Confirmed') return badRequest(res, Messages.ALREADY_VERIFIED);
 
-        sendVerificationEmail(user, user._id, 'Verify your account', true);
+        const emailResult = sendVerificationEmail(user, user._id, 'Verify your account', true);
+
+        if (!emailResult) return badRequest(res, Messages.USER + Messages.FAILED);
 
         return okStatus(res, Messages.RE_VERIFICATION);
     } catch (error) {
@@ -223,7 +236,7 @@ async function changePassword(req: Request, res: Response) {
 
         if (!token || !password) return badRequest(res, Messages.MISSING_FIELDS);
 
-        const decoded = jwt.verify(token as string, JWT_SECRET) as { id: string; email: string };
+        const decoded = jwt.verify(token as string, JWT_SECRET) as { id: string };
         const passwordHash = await bcrypt.hash(password, 10);
 
         const database = getDB();
