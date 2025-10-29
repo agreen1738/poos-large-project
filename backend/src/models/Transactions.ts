@@ -5,7 +5,6 @@ export interface Transactions {
     userId?: ObjectId;
     accountId?: ObjectId;
     amount: number;
-    currency: string;
     category: string;
     type: string;
     date: Date;
