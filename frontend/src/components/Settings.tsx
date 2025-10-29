@@ -10,6 +10,7 @@ function Settings() {
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',

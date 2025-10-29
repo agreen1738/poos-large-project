@@ -1,30 +1,29 @@
-// src/services/accountService.ts - Account service
+// src/services/accountService.ts - Account service matching backend
 import api from './api';
 
 export interface Account {
-  id: string;
-  name: string;
-  type: string;
-  balance: number;
-  accountNumber: string;
-  institution: string;
+  _id: string;
   userId: string;
+  accountName: string;
+  accountType: string;
+  balanace: number; // Note: backend has typo "balanace"
+  currency: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateAccountData {
-  name: string;
-  type: string;
-  balance: number;
-  accountNumber: string;
-  institution: string;
+  name: string; // Maps to accountName in backend
+  type: string; // Maps to accountType in backend
 }
 
 export interface UpdateAccountData {
-  name?: string;
-  type?: string;
-  balance?: number;
-  accountNumber?: string;
-  institution?: string;
+  accountName?: string;
+  accountType?: string;
+  balanace?: number;
+  currency?: string;
+  isActive?: boolean;
 }
 
 class AccountService {
@@ -32,39 +31,32 @@ class AccountService {
   async getAccounts(): Promise<Account[]> {
     try {
       const response = await api.get('/accounts');
-      return response.data.accounts || response.data;
+      return response.data; // Backend returns array directly
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch accounts');
-    }
-  }
-
-  // Get a single account by ID
-  async getAccountById(id: string): Promise<Account> {
-    try {
-      const response = await api.get(`/accounts/${id}`);
-      return response.data.account || response.data;
-    } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch accounts';
+      throw new Error(errorMessage);
     }
   }
 
   // Create a new account
-  async createAccount(data: CreateAccountData): Promise<Account> {
+  async createAccount(data: CreateAccountData): Promise<void> {
     try {
-      const response = await api.post('/account', data);
-      return response.data.account || response.data;
+      await api.post('/account', data);
+      // Backend returns success message, not the created account
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to create account';
+      throw new Error(errorMessage);
     }
   }
 
   // Update an existing account
-  async updateAccount(id: string, data: UpdateAccountData): Promise<Account> {
+  async updateAccount(id: string, data: UpdateAccountData): Promise<void> {
     try {
-      const response = await api.put(`/account/${id}`, data);
-      return response.data.account || response.data;
+      await api.put(`/account/${id}`, data);
+      // Backend returns success message
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to update account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to update account';
+      throw new Error(errorMessage);
     }
   }
 
@@ -73,7 +65,8 @@ class AccountService {
     try {
       await api.delete(`/account/${id}`);
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to delete account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to delete account';
+      throw new Error(errorMessage);
     }
   }
 }

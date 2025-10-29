@@ -1,16 +1,8 @@
 // Accounts.tsx - Accounts page with add account functionality
 import { useState, useEffect } from 'react';
 import accountService from '../services/accountService';
+import type { Account } from '../services/accountService';
 import './Accounts.css';
-
-interface Account {
-  id: number;
-  name: string;
-  type: string;
-  balance: number;
-  accountNumber: string;
-  institution: string;
-}
 
 function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -20,10 +12,7 @@ function Accounts() {
   // Form state
   const [formData, setFormData] = useState({
     name: '',
-    type: 'Checking',
-    balance: '',
-    accountNumber: '',
-    institution: ''
+    type: 'Checking'
   });
 
   useEffect(() => {
@@ -33,31 +22,12 @@ function Accounts() {
   async function fetchAccounts() {
     setLoading(true);
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const user = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/accounts`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: user.id }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setAccounts(res.accounts || []);
-      }
-    } catch (error) {
-      console.log('Using sample data for testing');
-      // Sample data for testing
-      setAccounts([
-        { id: 1, name: 'Chase Checking', type: 'Checking', balance: 1204.45, accountNumber: '****1234', institution: 'Chase Bank' },
-        { id: 2, name: 'Savings Account', type: 'Savings', balance: 13901.28, accountNumber: '****5678', institution: 'Bank of America' },
-        { id: 3, name: 'Credit Card', type: 'Credit', balance: -67.89, accountNumber: '****9012', institution: 'Capital One' },
-        { id: 4, name: 'Investment Account', type: 'Investment', balance: 25430.50, accountNumber: '****3456', institution: 'Vanguard' },
-      ]);
+      const data = await accountService.getAccounts();
+      setAccounts(data);
+    } catch (error: any) {
+      console.error('Error fetching accounts:', error);
+      // Show error to user
+      alert(error.message || 'Failed to load accounts');
     } finally {
       setLoading(false);
     }
@@ -71,31 +41,38 @@ function Accounts() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Backend integration will go here
-    console.log('Account to be added:', formData);
     
-    // Close modal and reset form
-    setShowModal(false);
-    setFormData({
-      name: '',
-      type: 'Checking',
-      balance: '',
-      accountNumber: '',
-      institution: ''
-    });
-    
-    // Show confirmation
-    alert('Account will be added when backend is ready!');
+    try {
+      // Create account using service
+      await accountService.createAccount({
+        name: formData.name,
+        type: formData.type
+      });
+      
+      // Refresh accounts list
+      await fetchAccounts();
+      
+      // Close modal and reset form
+      setShowModal(false);
+      setFormData({
+        name: '',
+        type: 'Checking'
+      });
+      
+      alert('Account added successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to add account');
+    }
   };
 
   const getTotalBalance = () => {
-    return accounts.reduce((sum, account) => sum + account.balance, 0);
+    return accounts.reduce((sum, account) => sum + (account.balanace || 0), 0);
   };
 
-  const getAccountsByType = (type: string) => {
-    return accounts.filter(account => account.type === type);
+  const getAccountsByType = (accountType: string) => {
+    return accounts.filter(account => account.accountType === accountType);
   };
 
   return (
@@ -113,7 +90,7 @@ function Accounts() {
           </div>
           <div className="summary-card">
             <h3>Account Types</h3>
-            <p className="account-types">{new Set(accounts.map(a => a.type)).size}</p>
+            <p className="account-types">{new Set(accounts.map(a => a.accountType)).size}</p>
           </div>
         </div>
 
@@ -132,26 +109,26 @@ function Accounts() {
             <div className="accounts-grid">
               {accounts.length > 0 ? (
                 accounts.map((account) => (
-                  <div key={account.id} className="account-card">
+                  <div key={account._id} className="account-card">
                     <div className="account-card-header">
-                      <div className="account-type-badge" data-type={account.type.toLowerCase()}>
-                        {account.type}
+                      <div className="account-type-badge" data-type={account.accountType.toLowerCase()}>
+                        {account.accountType}
                       </div>
-                      <h4>{account.name}</h4>
+                      <h4>{account.accountName}</h4>
                     </div>
                     <div className="account-card-body">
                       <div className="account-info">
-                        <span className="info-label">Institution</span>
-                        <span className="info-value">{account.institution}</span>
+                        <span className="info-label">Currency</span>
+                        <span className="info-value">{account.currency}</span>
                       </div>
                       <div className="account-info">
-                        <span className="info-label">Account Number</span>
-                        <span className="info-value">{account.accountNumber}</span>
+                        <span className="info-label">Status</span>
+                        <span className="info-value">{account.isActive ? 'Active' : 'Inactive'}</span>
                       </div>
                       <div className="account-balance">
                         <span className="balance-label">Balance</span>
-                        <span className={`balance-value ${account.balance < 0 ? 'negative' : 'positive'}`}>
-                          ${Math.abs(account.balance).toFixed(2)}
+                        <span className={`balance-value ${(account.balanace || 0) < 0 ? 'negative' : 'positive'}`}>
+                          ${Math.abs(account.balanace || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -205,47 +182,6 @@ function Accounts() {
                   <option value="Investment">Investment</option>
                   <option value="Other">Other</option>
                 </select>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="institution">Financial Institution</label>
-                <input
-                  type="text"
-                  id="institution"
-                  name="institution"
-                  value={formData.institution}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Chase Bank"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="accountNumber">Account Number (Last 4 digits)</label>
-                <input
-                  type="text"
-                  id="accountNumber"
-                  name="accountNumber"
-                  value={formData.accountNumber}
-                  onChange={handleInputChange}
-                  placeholder="1234"
-                  maxLength={4}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="balance">Current Balance</label>
-                <input
-                  type="number"
-                  id="balance"
-                  name="balance"
-                  value={formData.balance}
-                  onChange={handleInputChange}
-                  placeholder="0.00"
-                  step="0.01"
-                  required
-                />
               </div>
 
               <div className="modal-actions">

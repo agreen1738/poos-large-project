@@ -8,6 +8,8 @@ import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
+import EmailVerificationPage from "./pages/EmailVerificationPage";
+import ResendVerificationPage from "./pages/ResendVerificationPage";
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/verify" element={<EmailVerificationPage />} />
+        <Route path="/resend-verification" element={<ResendVerificationPage />} />
       </Routes>
     </BrowserRouter>
   );

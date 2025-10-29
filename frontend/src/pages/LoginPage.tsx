@@ -7,26 +7,48 @@ function LoginPage() {
   const [loginPassword, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   async function doLogin(event: React.FormEvent): Promise<void> {
     event.preventDefault();
+    event.stopPropagation();
+    
     setIsLoading(true);
     setMessage('');
+    setDebugInfo([]);
+
+    const logs: string[] = [];
+    logs.push(`✓ Form submitted`);
+    logs.push(`✓ Attempting login with: ${loginName}`);
+    setDebugInfo([...logs]);
 
     try {
-      // Use authService to login
-      await authService.login({
+      logs.push('✓ Calling authService.login...');
+      setDebugInfo([...logs]);
+      
+      const user = await authService.login({
         login: loginName,
         password: loginPassword
       });
 
-      // Redirect to dashboard on success
-      window.location.href = '/dashboard';
+      logs.push(`✓ Login successful! User: ${user.firstName}`);
+      logs.push(`✓ Redirecting to dashboard...`);
+      setDebugInfo([...logs]);
+
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1000);
     } catch (error: any) {
+      logs.push(`✗ ERROR: ${error.message}`);
+      console.error('Full error object:', error);
+      console.error('Error response:', error.response);
+      setDebugInfo([...logs]);
       setMessage(error.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
+    
+    return;
   }
 
   return (
@@ -38,7 +60,7 @@ function LoginPage() {
         <form className="login-form" onSubmit={doLogin}>
           <input
             type="text"
-            placeholder="Username"
+            placeholder="Email Address"
             value={loginName}
             onChange={(e) => setLoginName(e.target.value)}
             required
@@ -61,6 +83,18 @@ function LoginPage() {
         </form>
 
         {message && <div className="error-message">{message}</div>}
+
+        {/* Debug Info */}
+        {debugInfo.length > 0 && (
+          <div className="debug-info">
+            <strong>Debug Info:</strong>
+            {debugInfo.map((log, index) => (
+              <div key={index} style={{ fontSize: '11px', padding: '2px 0' }}>
+                {log}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="register-link">
           <p>Don't have an account? <a href="/register">Create one here</a></p>
