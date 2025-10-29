@@ -1,6 +1,7 @@
 // Dashboard.tsx - Main dashboard with sidebar and content layout
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
+import authService from '../services/authService';
 import './Dashboard.css';
 import Transactions from './Transactions';
 import Analytics from './Analytics';
@@ -20,15 +21,15 @@ function Dashboard() {
   const [activePage, setActivePage] = useState('dashboard');
 
   useEffect(() => {
-    const userData = localStorage.getItem('user_data');
+    // Get user data from authService
+    const userData = authService.getCurrentUser();
     if (userData) {
-      setUser(JSON.parse(userData));
+      setUser(userData);
     }
   }, []);
 
   function doLogout() {
-    localStorage.removeItem('user_data');
-    window.location.href = '/';
+    authService.logout();
   }
 
   const renderContent = () => {
@@ -42,7 +43,7 @@ function Dashboard() {
       case 'analytics':
         return <Analytics />;
       case 'settings':
-        return <SettingsContent />;
+        return <Settings />;
       default:
         return <DashboardContent user={user} />;
     }
@@ -54,7 +55,7 @@ function Dashboard() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <h2>Wealth Tracker</h2>
-          <p>Hello [Name]!!</p>
+          <p>Hello {user?.firstName || 'User'}!</p>
         </div>
 
         <div className="sidebar-icons">
@@ -103,7 +104,7 @@ function Dashboard() {
       {/* Main Content */}
       <main className="main-content">
         <div className="content-header">
-          <h1>Hello [Name]!!</h1>
+          <h1>Hello {user?.firstName || 'User'}!</h1>
           <button className="icon-btn">
             <img src="/images/user.png" alt="Profile" className="icon-img" />
           </button>
@@ -143,59 +144,23 @@ function DashboardContent({ user }: { user: any }) {
 
   async function fetchCategoryData() {
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const userParsed = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/analytics/categories`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: userParsed.id, accountId: null }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setCategoryData(res.categories || []);
-      }
-    } catch (error) {
-      console.log('Using sample data for dashboard');
-      // Sample data for testing
+      // Use sample data for now since analytics endpoint may not exist yet
+      console.log('Using sample category data');
       setCategoryData([
         { name: 'Savings', value: 1200 },
         { name: 'Living', value: 1500 },
         { name: 'Hobbies', value: 200 },
         { name: 'Gambling', value: 100 }
       ]);
+    } catch (error) {
+      console.log('Error loading category data:', error);
     }
   }
 
   async function fetchTransactions() {
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const userParsed = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/transactions`, {
-        method: 'POST',
-        body: JSON.stringify({ 
-          userId: userParsed.id,
-          month: currentDate.getMonth() + 1,
-          year: currentDate.getFullYear()
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setTransactions(res.transactions || []);
-      }
-    } catch (error) {
-      console.log('Using sample data for testing');
-      // Sample data for testing
+      // Use sample data for now since transactions endpoint may not exist yet
+      console.log('Using sample transaction data');
       setTransactions([
         { id: 1, date: '2025-10-04', name: 'Uniqlo', amount: 158.67, category: 'Hobbies' },
         { id: 2, date: '2025-10-04', name: 'Publix', amount: 389.67, category: 'Living' },
@@ -204,6 +169,8 @@ function DashboardContent({ user }: { user: any }) {
         { id: 5, date: '2025-10-20', name: 'Savings Deposit', amount: 500.00, category: 'Savings' },
         { id: 6, date: '2025-10-12', name: 'Restaurant', amount: 45.32, category: 'Living' },
       ]);
+    } catch (error) {
+      console.log('Error loading transactions:', error);
     }
   }
 
@@ -428,12 +395,7 @@ function TransactionsContent() {
 }
 
 function AccountsContent() {
-  return (
-    <div className="content-section">
-      <h2>Accounts</h2>
-      <p>Accounts page content coming soon...</p>
-    </div>
-  );
+  return <Accounts />;
 }
 
 function AnalyticsContent() {

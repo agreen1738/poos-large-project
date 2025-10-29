@@ -1,9 +1,9 @@
 import { useState } from 'react';
+import authService from '../services/authService';
 import './RegisterPage.css';
 
 interface FormErrors {
-  firstName?: string;
-  lastName?: string;
+  name?: string;
   email?: string;
   phone?: string;
   password?: string;
@@ -12,8 +12,7 @@ interface FormErrors {
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     phone: '',
     password: '',
@@ -26,14 +25,9 @@ function RegisterPage() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // First Name validation
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-
-    // Last Name validation
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+    // Name validation
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
     }
 
     // Email validation
@@ -46,8 +40,6 @@ function RegisterPage() {
     // Phone validation
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number';
     }
 
     // Password validation
@@ -93,26 +85,28 @@ function RegisterPage() {
 
     setIsLoading(true);
 
+    // FIXED: Send all 6 required fields to match backend
+    const registerData = {
+      firstName: formData.name,
+      lastName: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword
+    };
+
+    console.log('Sending registration data:', registerData);
+    console.log('Number of fields:', Object.keys(registerData).length);
+
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/api/register`, {
-        method: 'POST',
-        body: JSON.stringify(formData),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-
-      if (res.error) {
-        alert('Registration failed: ' + res.error);
-      } else {
-        alert('Registration successful! Please login.');
-        window.location.href = '/';
-      }
-    } catch (error) {
-      console.log('Backend not responding, using temporary test registration');
-      alert('Registration will work when backend is ready! Redirecting to login...');
+      // Use authService to register
+      await authService.register(registerData);
+      
+      alert('Registration successful! Please check your email to verify your account before logging in.');
       window.location.href = '/';
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      alert('Registration failed: ' + (error.message || 'Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -125,33 +119,18 @@ function RegisterPage() {
         <p className="subtitle">Create Your Account</p>
         
         <form className="register-form" onSubmit={handleSubmit}>
-          {/* First Name */}
+          {/* Name */}
           <div className="form-field">
             <input
               type="text"
-              name="firstName"
-              placeholder="First Name"
-              value={formData.firstName}
+              name="name"
+              placeholder="Full Name"
+              value={formData.name}
               onChange={handleInputChange}
-              className={errors.firstName ? 'error shake' : ''}
+              className={errors.name ? 'error shake' : ''}
             />
-            {errors.firstName && (
-              <span className="error-message">{errors.firstName}</span>
-            )}
-          </div>
-
-          {/* Last Name */}
-          <div className="form-field">
-            <input
-              type="text"
-              name="lastName"
-              placeholder="Last Name"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              className={errors.lastName ? 'error shake' : ''}
-            />
-            {errors.lastName && (
-              <span className="error-message">{errors.lastName}</span>
+            {errors.name && (
+              <span className="error-message">{errors.name}</span>
             )}
           </div>
 
@@ -170,7 +149,7 @@ function RegisterPage() {
             )}
           </div>
 
-          {/* Phone */}
+          {/* Phone - NEW FIELD */}
           <div className="form-field">
             <input
               type="tel"

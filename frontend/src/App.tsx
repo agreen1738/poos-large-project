@@ -5,6 +5,11 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import NotFound from './pages/NotFound';
 import RegisterPage from "./pages/RegisterPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import EmailVerificationPage from "./pages/EmailVerificationPage";
+import ResendVerificationPage from "./pages/ResendVerificationPage";
 
 function App() {
   return (
@@ -14,6 +19,11 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/verify" element={<EmailVerificationPage />} />
+        <Route path="/resend-verification" element={<ResendVerificationPage />} />
       </Routes>
     </BrowserRouter>
   );

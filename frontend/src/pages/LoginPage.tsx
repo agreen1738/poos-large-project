@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import authService from '../services/authService';
 import './LoginPage.css';
 
 function LoginPage() {
@@ -6,56 +7,48 @@ function LoginPage() {
   const [loginPassword, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
-  async function doLogin(event: any): Promise<void> {
+  async function doLogin(event: React.FormEvent): Promise<void> {
     event.preventDefault();
+    event.stopPropagation();
+    
     setIsLoading(true);
     setMessage('');
+    setDebugInfo([]);
 
-    const obj = { login: loginName, password: loginPassword };
-    const js = JSON.stringify(obj);
+    const logs: string[] = [];
+    logs.push(`✓ Form submitted`);
+    logs.push(`✓ Attempting login with: ${loginName}`);
+    setDebugInfo([...logs]);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/api/login`, {
-        method: 'POST',
-        body: js,
-        headers: { 'Content-Type': 'application/json' }
+      logs.push('✓ Calling authService.login...');
+      setDebugInfo([...logs]);
+      
+      const user = await authService.login({
+        login: loginName,
+        password: loginPassword
       });
 
-      const res = await response.json();
+      logs.push(`✓ Login successful! User: ${user.firstName}`);
+      logs.push(`✓ Redirecting to dashboard...`);
+      setDebugInfo([...logs]);
 
-      if (res.id <= 0 || res.error) {
-        setMessage('User/Password combination incorrect');
-      } else {
-        const user = {
-          firstName: res.firstName,
-          lastName: res.lastName,
-          id: res.id
-        };
-        localStorage.setItem('user_data', JSON.stringify(user));
-        setMessage('');
+      setTimeout(() => {
         window.location.href = '/dashboard';
-      }
+      }, 1000);
     } catch (error: any) {
-      // TEMPORARY TEST LOGIN - Remove this after backend is connected
-      console.log('Backend not responding, using temporary test login');
-      
-      if (loginName && loginPassword) {
-        const user = {
-          firstName: 'Test',
-          lastName: 'User',
-          id: 1
-        };
-        localStorage.setItem('user_data', JSON.stringify(user));
-        setMessage('');
-        window.location.href = '/dashboard';
-      } else {
-        setMessage('Please enter username and password');
-      }
+      logs.push(`✗ ERROR: ${error.message}`);
+      console.error('Full error object:', error);
+      console.error('Error response:', error.response);
+      setDebugInfo([...logs]);
+      setMessage(error.message || 'Login failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
+    
+    return;
   }
 
   return (
@@ -67,7 +60,7 @@ function LoginPage() {
         <form className="login-form" onSubmit={doLogin}>
           <input
             type="text"
-            placeholder="Username"
+            placeholder="Email Address"
             value={loginName}
             onChange={(e) => setLoginName(e.target.value)}
             required
@@ -79,19 +72,29 @@ function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
+          
+          <div className="form-footer">
+            <a href="/forgot-password" className="forgot-password-link">Forgot Password?</a>
+          </div>
+          
           <button type="submit" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
         {message && <div className="error-message">{message}</div>}
-        
-        {/* TEMPORARY - Remove this after backend is connected */}
-        <div className="temp-test-notice">
-          <p style={{ fontSize: '12px', color: '#999', marginTop: '15px', textAlign: 'center' }}>
-            ⚠️ Temporary Test Mode: Enter any username/password ⚠️
-          </p>
-        </div>
+
+        {/* Debug Info */}
+        {debugInfo.length > 0 && (
+          <div className="debug-info">
+            <strong>Debug Info:</strong>
+            {debugInfo.map((log, index) => (
+              <div key={index} style={{ fontSize: '11px', padding: '2px 0' }}>
+                {log}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="register-link">
           <p>Don't have an account? <a href="/register">Create one here</a></p>
