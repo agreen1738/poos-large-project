@@ -26,36 +26,40 @@ async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify 
     const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${verificationToken}`;
     const emailSubject = isResend ? `Resend: ${subject}` : subject;
     const message = `
-        <h2>Hi ${user.name},</h2>
+        <h2>Hi ${user.firstName} ${user.lastName},</h2>
         <p>${isResend ? 'It looks like you requested a new verification link.' : 'Thanks for signing up!'}</p>
         <p>Click the link below to verify your account:</p>
         <a href="${verificationLink}">Verify Account</a>
         <p>This link will expire in 15 minutes.</p>
     `;
-    await transporter.sendMail({
+    const result = await transporter.sendMail({
         from: `'WealthTracker' <${process.env.EMAIL_USER}>`,
         to: user.email,
         subject: emailSubject,
         html: message,
     });
+
+    return result.accepted;
 }
 
 async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
     const passwordResetLink = `${process.env.FRONTEND_URL}/forgot-password?token=${resetToken}`;
     const emailSubject = 'Reset Password';
     const message = `
-        <h2>Hi ${user.name},</h2>
+        <h2>Hi ${user.firstName} ${user.lastName},</h2>
         <p>'It looks like you are attempting to reset your password.</p>
         <p>Click the link below to reset your password:</p>
         <a href="${passwordResetLink}">Reset Password</a>
         <p>This link will expire in 15 minutes.</p>
     `;
-    await transporter.sendMail({
+    const result = await transporter.sendMail({
         from: `'WealthTracker' <${process.env.EMAIL_USER}>`,
         to: user.email,
         subject: emailSubject,
         html: message,
     });
+
+    return result.accepted;
 }
 
 async function register(req: Request, res: Response) {
@@ -232,4 +236,13 @@ async function changePassword(req: Request, res: Response) {
     }
 }
 
-export { register, login, verifyEmail, resendVerification, forgotPassword, changePassword };
+export {
+    register,
+    login,
+    verifyEmail,
+    sendVerificationEmail,
+    sendPasswordRecoveryEmail,
+    resendVerification,
+    forgotPassword,
+    changePassword,
+};

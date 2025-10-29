@@ -18,9 +18,33 @@ async function getAccounts(req: Request, res: Response) {
         const database = getDB();
         const collection = database.collection('Accounts');
         const userId = new ObjectId(req.user!.id);
-        const accounts = await collection.find({ userId }).toArray();
+        const accounts = await collection.find({ userId }, { projection: { userId: 0 } }).toArray();
+
+        if (accounts.length === 0) return badRequest(res, Messages.ACCOUNT + Messages.FAILED);
 
         return res.status(200).json(accounts);
+    } catch (error) {
+        return internalServerError(res, error);
+    }
+}
+
+async function getAccount(req: Request, res: Response) {
+    try {
+        const paramsLength = Object.keys(req.params).length;
+
+        if (paramsLength !== 1) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
+
+        const id = req.params.id;
+
+        if (!id) return badRequest(res, Messages.MISSING_FIELDS);
+
+        const database = getDB();
+        const collection = database.collection('Accounts');
+        const accountId = new ObjectId(id);
+        const userId = new ObjectId(req.user!.id);
+        const account = await collection.findOne({ _id: accountId, userId: userId }, { projection: { userId: 0 } });
+
+        return res.status(200).json(account);
     } catch (error) {
         return internalServerError(res, error);
     }
@@ -30,38 +54,36 @@ async function createAccount(req: Request, res: Response) {
     try {
         const bodyLength = Object.keys(req.body).length;
 
-        if (bodyLength !== 2) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
+        if (bodyLength !== 5) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
 
-        const { name, type } = req.body;
+        const { accountName, accountType, accountNumber, accountInstitution, balance } = req.body;
 
-        if (!name || !type) return badRequest(res, Messages.MISSING_FIELDS);
+        if (!accountName || !accountType || !accountNumber) return badRequest(res, Messages.MISSING_FIELDS);
 
-        const database = getDB();
-        const userCollection = database.collection('User');
-        const accountsCollection = database.collection('Accounts');
         const userId = new ObjectId(req.user!.id);
-        const user = await userCollection.findOne({ _id: userId });
+        const database = getDB();
+        const collection = database.collection('Accounts');
+        const account = await collection.findOne({ accountNumber: accountNumber, userId: userId });
 
-        if (!user) return unauthorized(res, Messages.INVALID_CREDENTIAL);
-
-        const account = await accountsCollection.findOne({ accountName: name });
-
-        if (account && user._id.toString() === userId.toString()) {
-            return unauthorized(res, Messages.NAME_TAKEN);
-        }
+        if (account) return unauthorized(res, Messages.NUMBER_TAKEN);
 
         const newAccount: Accounts = {
             userId: userId,
-            accountName: name,
-            accountType: type,
-            balanace: 0,
+            accountName: accountName,
+            accountType: accountType,
+            accountNumber: accountNumber,
+            accountInstitution: accountInstitution,
+            balanace: balance,
             currency: 'USD',
             isActive: true,
             createdAt: new Date(),
             updatedAt: new Date(),
         };
 
-        await accountsCollection.insertOne(newAccount);
+        const result = await collection.insertOne(newAccount);
+
+        if (!result.acknowledged) return badRequest(res, Messages.ACCOUNT + Messages.FAILED);
+
         return created(res, Messages.ACCOUNT + Messages.CREATED);
     } catch (error) {
         return internalServerError(res, error);
@@ -70,13 +92,20 @@ async function createAccount(req: Request, res: Response) {
 
 async function deleteAccount(req: Request, res: Response) {
     try {
+        const paramsLength = Object.keys(req.params).length;
+
+        if (paramsLength !== 1) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
+
+        const id = req.params.id;
+
+        if (!id) return badRequest(res, Messages.MISSING_FIELDS);
+
+        const userId = new ObjectId(req.user!.id);
+        const accountId = new ObjectId(id);
         const database = getDB();
         const collection = database.collection('Accounts');
 
-        const account = await collection.deleteOne({
-            _id: new ObjectId(req.params.id),
-            userId: new ObjectId(req.user!.id),
-        });
+        const account = await collection.deleteOne({ _id: accountId, userId: userId });
 
         if (account.deletedCount === 0) {
             return badRequest(res, Messages.FAILED);
@@ -90,11 +119,19 @@ async function deleteAccount(req: Request, res: Response) {
 
 async function updateAccount(req: Request, res: Response) {
     try {
+        const paramsLength = Object.keys(req.params).length;
+
+        if (paramsLength !== 1) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
+
+        const id = req.params.id;
+
+        if (!id) return badRequest(res, Messages.MISSING_FIELDS);
+
+        const accountId = new ObjectId(id);
+        const userId = new ObjectId(req.user!.id);
         const database = getDB();
         const collection = database.collection('Accounts');
-        const id = req.params.id;
-        const userId = req.user!.id;
-        const allowedFields = ['accountName', 'accountType', 'balanace', 'currency', 'isActive'];
+        const allowedFields = ['accountName', 'accountType', 'accountNumber', 'balanace', 'currency', 'isActive'];
         const fields = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
 
         if (Object.keys(fields).length === 0) {
@@ -102,7 +139,7 @@ async function updateAccount(req: Request, res: Response) {
         }
 
         const account = await collection.findOneAndUpdate(
-            { _id: new ObjectId(id), userId: new ObjectId(userId) },
+            { _id: accountId, userId: userId },
             { $set: { ...fields, updatedAt: new Date() } },
             { returnDocument: 'after' }
         );
@@ -117,4 +154,4 @@ async function updateAccount(req: Request, res: Response) {
     }
 }
 
-export { getAccounts, createAccount, deleteAccount, updateAccount };
+export { getAccounts, getAccount, createAccount, deleteAccount, updateAccount };
