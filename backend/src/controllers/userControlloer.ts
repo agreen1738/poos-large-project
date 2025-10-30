@@ -20,7 +20,8 @@ async function getInfo(req: Request, res: Response) {
 
         return res.status(200).json(user);
     } catch (error) {
-        internalServerError(res, error);
+        console.error('Error in getInfo:', error);
+        return internalServerError(res, error);
     }
 }
 
@@ -32,34 +33,80 @@ async function updateInfo(req: Request, res: Response) {
         const allowedFields = ['firstName', 'lastName', 'email', 'phone'];
         const fields = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
 
-        if (Object.keys(fields).length === 0) return badRequest(res, Messages.MISSING_FIELDS);
-
-        if (fields.email) {
-            const user = await collection.findOne(
-                { _id: userId },
-                { projection: { _id: 0, email: 0, phone: 0, passwordHash: 0, createdAt: 0 } }
-            );
-
-            if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
-
-            const email = await sendVerificationEmail(user, userId);
-
-            if (!email) return badRequest(res, Messages.FAILED);
-
-            const update = await collection.updateOne({ _id: userId }, { $set: { ...fields, status: 'Pending' } });
-
-            if (!update.acknowledged) return badRequest(res, Messages.USER + Messages.FAILED);
-
-            return updated(res, Messages.USER + Messages.UPDATED);
+        if (Object.keys(fields).length === 0) {
+            return badRequest(res, Messages.MISSING_FIELDS);
         }
 
-        const update = await collection.updateOne({ _id: userId }, { $set: { ...fields } });
+        // CRITICAL FIX: Get the current user from database to check if email is actually changing
+        const currentUser = await collection.findOne({ _id: userId });
+        
+        if (!currentUser) {
+            return badRequest(res, Messages.USER + Messages.FAILED);
+        }
 
-        if (!update.acknowledged) return badRequest(res, Messages.USER + Messages.FAILED);
+        // CRITICAL FIX: Only trigger email verification if email is ACTUALLY CHANGING
+        // Not just if email field is present in the request
+        const isEmailActuallyChanging = fields.email && fields.email !== currentUser.email;
+
+        if (isEmailActuallyChanging) {
+            // Email is changing - need to send verification to the NEW email
+            console.log('Email is changing from', currentUser.email, 'to', fields.email);
+            
+            // Create a temporary user object with the NEW email for verification
+            const userWithNewEmail = {
+                ...currentUser,
+                email: fields.email // Use the NEW email
+            };
+
+            try {
+                const emailResult = await sendVerificationEmail(userWithNewEmail, userId);
+
+                if (!emailResult || emailResult.length === 0) {
+                    console.error('Failed to send verification email');
+                    return badRequest(res, 'Failed to send verification email');
+                }
+
+                // Update user with new email and set status to Pending
+                const update = await collection.updateOne(
+                    { _id: userId }, 
+                    { $set: { ...fields, status: 'Pending' } }
+                );
+
+                if (!update.acknowledged) {
+                    return badRequest(res, Messages.USER + Messages.FAILED);
+                }
+
+                return updated(res, Messages.USER + Messages.UPDATED + '. Please verify your new email address.');
+            } catch (emailError) {
+                console.error('Error sending verification email:', emailError);
+                return badRequest(res, 'Failed to send verification email');
+            }
+        }
+
+        // Email is NOT changing - just update the other fields (firstName, lastName, phone)
+        // Remove email from fields if it's the same as current email
+        if (fields.email === currentUser.email) {
+            delete fields.email;
+        }
+
+        // If no fields left to update after removing unchanged email
+        if (Object.keys(fields).length === 0) {
+            return updated(res, 'No changes detected');
+        }
+
+        const update = await collection.updateOne(
+            { _id: userId }, 
+            { $set: fields }
+        );
+
+        if (!update.acknowledged) {
+            return badRequest(res, Messages.USER + Messages.FAILED);
+        }
 
         return updated(res, Messages.USER + Messages.UPDATED);
     } catch (error) {
-        internalServerError(res, error);
+        console.error('Error in updateInfo:', error);
+        return internalServerError(res, error);
     }
 }
 
@@ -99,7 +146,8 @@ async function deleteProfile(req: Request, res: Response) {
 
         return deleted(res, Messages.USER + Messages.DELETED);
     } catch (error) {
-        internalServerError(res, error);
+        console.error('Error in deleteProfile:', error);
+        return internalServerError(res, error);
     }
 }
 
