@@ -47,11 +47,11 @@ async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify 
 }
 
 async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
-    const passwordResetLink = `${process.env.FRONTEND_URL}/forgot-password?token=${resetToken}`;
+    const passwordResetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     const emailSubject = 'Reset Password';
     const message = `
         <h4>Hi ${user.firstName},</h4>
-        <p>'It looks like you are attempting to reset your password.</p>
+        <p>It looks like you are attempting to reset your password.</p>
         <p>Click the link below to reset your password:</p>
         <a href="${passwordResetLink}">Reset Password</a>
         <p>This link will expire in 15 minutes.</p>

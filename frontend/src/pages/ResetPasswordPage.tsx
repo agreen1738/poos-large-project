@@ -33,10 +33,10 @@ function ResetPasswordPage() {
     setIsLoading(true);
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/api/reset-password`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
+      const response = await fetch(`${API_URL}/change-password?token=${token}`, {
         method: 'POST',
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ password }),
         headers: { 'Content-Type': 'application/json' }
       });
 
@@ -53,8 +53,8 @@ function ResetPasswordPage() {
         }, 2000);
       }
     } catch (error) {
-      console.log('Backend not responding');
-      setMessage('Password reset will work when backend is ready!');
+      console.error('Reset password error:', error);
+      setMessage('Failed to reset password. Please try again.');
       setIsSuccess(false);
     } finally {
       setIsLoading(false);

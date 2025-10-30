@@ -13,8 +13,8 @@ function ForgotPasswordPage() {
     setMessage('');
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/api/forgot-password`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api';
+      const response = await fetch(`${API_URL}/forgot-password`, {
         method: 'POST',
         body: JSON.stringify({ email }),
         headers: { 'Content-Type': 'application/json' }
@@ -31,9 +31,9 @@ function ForgotPasswordPage() {
         setEmail('');
       }
     } catch (error) {
-      console.log('Backend not responding');
-      setMessage('Password reset email will be sent when backend is ready!');
-      setIsSuccess(true);
+      console.error('Forgot password error:', error);
+      setMessage('Failed to send reset link. Please try again.');
+      setIsSuccess(false);
     } finally {
       setIsLoading(false);
     }

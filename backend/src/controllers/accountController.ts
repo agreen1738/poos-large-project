@@ -20,8 +20,7 @@ async function getAccounts(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const accounts = await collection.find({ userId }, { projection: { userId: 0 } }).toArray();
 
-        if (accounts.length === 0) return badRequest(res, Messages.ACCOUNT + Messages.FAILED);
-
+        // FIXED: Return empty array instead of 400 error when no accounts exist
         return res.status(200).json(accounts);
     } catch (error) {
         return internalServerError(res, error);
