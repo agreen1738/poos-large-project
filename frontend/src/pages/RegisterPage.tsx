@@ -3,7 +3,8 @@ import authService from '../services/authService';
 import './RegisterPage.css';
 
 interface FormErrors {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   password?: string;
@@ -12,7 +13,8 @@ interface FormErrors {
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     password: '',
@@ -25,9 +27,14 @@ function RegisterPage() {
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Name validation
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+    // First Name validation
+    if (!formData.firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+
+    // Last Name validation
+    if (!formData.lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
     }
 
     // Email validation
@@ -85,10 +92,10 @@ function RegisterPage() {
 
     setIsLoading(true);
 
-    // FIXED: Send all 6 required fields to match backend
+    // Send all 6 required fields to match backend
     const registerData = {
-      firstName: formData.name,
-      lastName: formData.name,
+      firstName: formData.firstName,
+      lastName: formData.lastName,
       email: formData.email,
       phone: formData.phone,
       password: formData.password,
@@ -119,18 +126,33 @@ function RegisterPage() {
         <p className="subtitle">Create Your Account</p>
         
         <form className="register-form" onSubmit={handleSubmit}>
-          {/* Name */}
+          {/* First Name */}
           <div className="form-field">
             <input
               type="text"
-              name="name"
-              placeholder="Full Name"
-              value={formData.name}
+              name="firstName"
+              placeholder="First Name"
+              value={formData.firstName}
               onChange={handleInputChange}
-              className={errors.name ? 'error shake' : ''}
+              className={errors.firstName ? 'error shake' : ''}
             />
-            {errors.name && (
-              <span className="error-message">{errors.name}</span>
+            {errors.firstName && (
+              <span className="error-message">{errors.firstName}</span>
+            )}
+          </div>
+
+          {/* Last Name */}
+          <div className="form-field">
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Last Name"
+              value={formData.lastName}
+              onChange={handleInputChange}
+              className={errors.lastName ? 'error shake' : ''}
+            />
+            {errors.lastName && (
+              <span className="error-message">{errors.lastName}</span>
             )}
           </div>
 
@@ -149,7 +171,7 @@ function RegisterPage() {
             )}
           </div>
 
-          {/* Phone - NEW FIELD */}
+          {/* Phone */}
           <div className="form-field">
             <input
               type="tel"
