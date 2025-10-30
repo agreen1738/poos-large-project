@@ -8,14 +8,6 @@ import Analytics from './Analytics';
 import Settings from './Settings';
 import Accounts from './Accounts';
 
-interface Transaction {
-  id: number;
-  date: string;
-  name: string;
-  amount: number;
-  category: string;
-}
-
 function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [activePage, setActivePage] = useState('dashboard');
@@ -35,7 +27,7 @@ function Dashboard() {
   const renderContent = () => {
     switch (activePage) {
       case 'dashboard':
-        return <DashboardContent user={user} />;
+        return <DashboardContent />;
       case 'transactions':
         return <Transactions />;
       case 'accounts':
@@ -45,7 +37,7 @@ function Dashboard() {
       case 'settings':
         return <Settings />;
       default:
-        return <DashboardContent user={user} />;
+        return <DashboardContent />;
     }
   };
 
@@ -123,7 +115,7 @@ function Dashboard() {
 }
 
 // Dashboard Content Component
-function DashboardContent({ user }: { user: any }) {
+function DashboardContent() {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -382,33 +374,6 @@ function DashboardContent({ user }: { user: any }) {
       </div>
     </div>
   );
-}
-
-// Placeholder Components for Other Pages
-function TransactionsContent() {
-  return (
-    <div className="content-section">
-      <h2>Transactions</h2>
-      <p>Transactions page content coming soon...</p>
-    </div>
-  );
-}
-
-function AccountsContent() {
-  return <Accounts />;
-}
-
-function AnalyticsContent() {
-  return (
-    <div className="content-section">
-      <h2>Analytics</h2>
-      <p>Analytics page content coming soon...</p>
-    </div>
-  );
-}
-
-function SettingsContent() {
-  return <Settings />;
 }
 
 export default Dashboard;

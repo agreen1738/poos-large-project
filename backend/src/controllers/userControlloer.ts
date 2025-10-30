@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { badRequest, deleted, internalServerError, Messages, updated } from '../utils/messageHandler.js';
+import { badRequest, deleted, internalServerError, Messages, updated, unauthorized } from '../utils/messageHandler.js';
 import { getDB } from '../database.js';
 import { ObjectId } from 'mongodb';
 import { sendVerificationEmail } from './authController.js';
+import bcrypt from 'bcrypt';
 
 async function getInfo(req: Request, res: Response) {
     try {
@@ -64,15 +65,39 @@ async function updateInfo(req: Request, res: Response) {
 
 async function deleteProfile(req: Request, res: Response) {
     try {
+        const bodyLength = Object.keys(req.body).length;
+
+        // Expect password in request body
+        if (bodyLength !== 1) return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
+
+        const { password } = req.body;
+
+        if (!password) return badRequest(res, Messages.MISSING_FIELDS);
+
         const database = getDB();
         const collection = database.collection('User');
         const userId = new ObjectId(req.user!.id);
 
-        const user = await collection.deleteOne({ _id: userId });
+        // Get user with password hash to verify
+        const user = await collection.findOne({ _id: userId });
 
-        if (user.deletedCount === 0) return badRequest(res, Messages.USER + Messages.FAILED);
+        if (!user) return badRequest(res, Messages.USER + Messages.FAILED);
 
-        deleted(res, Messages.USER + Messages.DELETED);
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+        if (!isPasswordValid) return unauthorized(res, 'Invalid password');
+
+        // Delete user
+        const deleteResult = await collection.deleteOne({ _id: userId });
+
+        if (deleteResult.deletedCount === 0) return badRequest(res, Messages.USER + Messages.FAILED);
+
+        // Also delete all user's accounts and transactions
+        await database.collection('Accounts').deleteMany({ userId });
+        await database.collection('Transactions').deleteMany({ userId });
+
+        return deleted(res, Messages.USER + Messages.DELETED);
     } catch (error) {
         internalServerError(res, error);
     }

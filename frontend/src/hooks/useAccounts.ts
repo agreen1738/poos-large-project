@@ -1,6 +1,6 @@
 // src/hooks/useAccounts.ts - Custom hook for accounts
 import { useState, useEffect } from 'react';
-import accountService, { type Account, type CreateAccountData } from '../services/accountService';
+import accountService, { type Account, type CreateAccountData, type UpdateAccountData } from '../services/accountService';
 
 export function useAccounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -25,9 +25,9 @@ export function useAccounts() {
   // Create new account
   const createAccount = async (data: CreateAccountData) => {
     try {
-      const newAccount = await accountService.createAccount(data);
-      setAccounts(prev => [...prev, newAccount]);
-      return newAccount;
+      await accountService.createAccount(data);
+      // Refetch accounts after creating since backend doesn't return the created account
+      await fetchAccounts();
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -38,7 +38,8 @@ export function useAccounts() {
   const deleteAccount = async (id: string) => {
     try {
       await accountService.deleteAccount(id);
-      setAccounts(prev => prev.filter(acc => acc.id !== id));
+      // Filter using _id which is the actual MongoDB field name
+      setAccounts(prev => prev.filter(acc => acc._id !== id));
     } catch (err: any) {
       setError(err.message);
       throw err;
@@ -46,11 +47,11 @@ export function useAccounts() {
   };
 
   // Update account
-  const updateAccount = async (id: string, data: Partial<CreateAccountData>) => {
+  const updateAccount = async (id: string, data: UpdateAccountData) => {
     try {
-      const updated = await accountService.updateAccount(id, data);
-      setAccounts(prev => prev.map(acc => acc.id === id ? updated : acc));
-      return updated;
+      await accountService.updateAccount(id, data);
+      // Refetch accounts after updating since backend doesn't return the updated account
+      await fetchAccounts();
     } catch (err: any) {
       setError(err.message);
       throw err;

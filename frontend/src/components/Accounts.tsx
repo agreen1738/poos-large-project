@@ -71,10 +71,6 @@ function Accounts() {
     return accounts.reduce((sum, account) => sum + (account.balanace || 0), 0);
   };
 
-  const getAccountsByType = (accountType: string) => {
-    return accounts.filter(account => account.accountType === accountType);
-  };
-
   return (
     <>
       <div className="accounts-page">
