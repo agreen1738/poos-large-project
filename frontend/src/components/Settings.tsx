@@ -1,4 +1,4 @@
-// Settings.tsx - Settings page component (simplified)
+// Settings.tsx - Settings page component
 import { useState, useEffect } from 'react';
 import userService from '../services/userService';
 import authService from '../services/authService';
@@ -73,6 +73,17 @@ function Settings() {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
+    if (!settingsData.currentPassword) {
+      alert('Please enter your current password');
+      return;
+    }
+
+    if (!settingsData.newPassword) {
+      alert('Please enter a new password');
+      return;
+    }
+
     if (settingsData.newPassword !== settingsData.confirmPassword) {
       alert('New passwords do not match!');
       return;
@@ -83,16 +94,24 @@ function Settings() {
       return;
     }
 
-    // TODO: Implement password change endpoint
-    alert('Password change functionality will be implemented soon!');
-    
-    // Clear password fields
-    setSettingsData(prev => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    }));
+    try {
+      await userService.changePassword({
+        currentPassword: settingsData.currentPassword,
+        newPassword: settingsData.newPassword
+      });
+      
+      // Clear password fields
+      setSettingsData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+      
+      alert('Password changed successfully!');
+    } catch (error: any) {
+      alert('Failed to change password: ' + error.message);
+    }
   };
 
   const handleDeleteAccount = () => {
