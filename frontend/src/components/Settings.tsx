@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import './Settings.css';
 
 function Settings() {
-  const [user, setUser] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [settingsData, setSettingsData] = useState({
@@ -31,7 +30,6 @@ function Settings() {
     const userData = localStorage.getItem('user_data');
     if (userData) {
       const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
       setSettingsData(prev => ({
         ...prev,
         firstName: parsedUser.firstName || '',
