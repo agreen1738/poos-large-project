@@ -16,6 +16,11 @@ export interface UpdateUserData {
   phone?: string;
 }
 
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
 class UserService {
   // Get current user information
   async getUserInfo(): Promise<User> {
@@ -34,6 +39,16 @@ class UserService {
       await api.put('/me', data);
     } catch (error: any) {
       const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to update user info';
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Change password
+  async changePassword(data: ChangePasswordData): Promise<void> {
+    try {
+      await api.put('/me/password', data);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to change password';
       throw new Error(errorMessage);
     }
   }

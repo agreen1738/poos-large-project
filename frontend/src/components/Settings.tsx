@@ -1,4 +1,4 @@
-// Settings.tsx - Settings page component with improved email and profile handling
+// Settings.tsx - Settings page component
 import { useState, useEffect } from 'react';
 import userService from '../services/userService';
 import authService from '../services/authService';
@@ -9,7 +9,6 @@ function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [settingsData, setSettingsData] = useState({
     firstName: '',
     lastName: '',
@@ -21,37 +20,19 @@ function Settings() {
   });
 
   useEffect(() => {
-    loadUserData();
-  }, []);
-
-  const loadUserData = async () => {
-    try {
-      // Try to fetch from API first
-      const userData = await userService.getUserInfo();
-      setUser(userData);
+    const userData = localStorage.getItem('user_data');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
       setSettingsData(prev => ({
         ...prev,
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        email: userData.email || '',
-        phone: userData.phone || ''
+        firstName: parsedUser.firstName || '',
+        lastName: parsedUser.lastName || '',
+        email: parsedUser.email || '',
+        phone: parsedUser.phone || ''
       }));
-    } catch (error) {
-      // Fall back to localStorage if API call fails
-      const localData = localStorage.getItem('user_data');
-      if (localData) {
-        const parsedUser = JSON.parse(localData);
-        setUser(parsedUser);
-        setSettingsData(prev => ({
-          ...prev,
-          firstName: parsedUser.firstName || '',
-          lastName: parsedUser.lastName || '',
-          email: parsedUser.email || '',
-          phone: parsedUser.phone || ''
-        }));
-      }
     }
-  };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,29 +45,6 @@ function Settings() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!settingsData.firstName.trim() || !settingsData.lastName.trim()) {
-      alert('First name and last name are required!');
-      return;
-    }
-
-    if (!settingsData.email.trim()) {
-      alert('Email is required!');
-      return;
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(settingsData.email)) {
-      alert('Please enter a valid email address!');
-      return;
-    }
-
-    // Check if email was changed
-    const emailChanged = settingsData.email !== user.email;
-    
-    setIsUpdatingProfile(true);
-
     try {
       await userService.updateUserInfo({
         firstName: settingsData.firstName,
@@ -95,7 +53,7 @@ function Settings() {
         phone: settingsData.phone
       });
       
-      // Update local storage with new data
+      // Update local storage
       const updatedUser = {
         ...user,
         firstName: settingsData.firstName,
@@ -106,38 +64,23 @@ function Settings() {
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
       setUser(updatedUser);
       
-      // Special handling if email was changed
-      if (emailChanged) {
-        alert(
-          '✅ Profile updated!\n\n' +
-          '📧 A verification email has been sent to: ' + settingsData.email + '\n\n' +
-          'Please verify your new email address before your next login.\n' +
-          'You will be logged out in 3 seconds.'
-        );
-        // Log out user since email needs verification
-        setTimeout(() => {
-          authService.logout();
-        }, 3000);
-      } else {
-        alert('✅ Profile updated successfully!');
-      }
+      alert('Profile updated successfully!');
     } catch (error: any) {
-      alert('❌ Failed to update profile: ' + error.message);
-    } finally {
-      setIsUpdatingProfile(false);
+      alert('Failed to update profile: ' + error.message);
     }
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
     if (!settingsData.currentPassword) {
-      alert('Please enter your current password!');
+      alert('Please enter your current password');
       return;
     }
 
     if (!settingsData.newPassword) {
-      alert('Please enter a new password!');
+      alert('Please enter a new password');
       return;
     }
 
@@ -151,16 +94,24 @@ function Settings() {
       return;
     }
 
-    // TODO: Implement password change endpoint
-    alert('⚠️ Password change functionality will be implemented soon!');
-    
-    // Clear password fields
-    setSettingsData(prev => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    }));
+    try {
+      await userService.changePassword({
+        currentPassword: settingsData.currentPassword,
+        newPassword: settingsData.newPassword
+      });
+      
+      // Clear password fields
+      setSettingsData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+      
+      alert('Password changed successfully!');
+    } catch (error: any) {
+      alert('Failed to change password: ' + error.message);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -180,12 +131,12 @@ function Settings() {
     try {
       await userService.deleteAccount(deletePassword);
       
-      alert('✅ Account deleted successfully. You will be redirected to the login page.');
+      alert('Account deleted successfully. You will be redirected to the login page.');
       
       // Clear all local storage and redirect
       authService.logout();
     } catch (error: any) {
-      alert('❌ Failed to delete account: ' + error.message);
+      alert('Failed to delete account: ' + error.message);
       setIsDeleting(false);
     }
   };
@@ -205,7 +156,7 @@ function Settings() {
         <form onSubmit={handleProfileUpdate} className="settings-form">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="firstName">First Name *</label>
+              <label htmlFor="firstName">First Name</label>
               <input
                 type="text"
                 id="firstName"
@@ -213,12 +164,10 @@ function Settings() {
                 value={settingsData.firstName}
                 onChange={handleInputChange}
                 placeholder="Enter first name"
-                required
-                disabled={isUpdatingProfile}
               />
             </div>
             <div className="form-group">
-              <label htmlFor="lastName">Last Name *</label>
+              <label htmlFor="lastName">Last Name</label>
               <input
                 type="text"
                 id="lastName"
@@ -226,13 +175,11 @@ function Settings() {
                 value={settingsData.lastName}
                 onChange={handleInputChange}
                 placeholder="Enter last name"
-                required
-                disabled={isUpdatingProfile}
               />
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="email">Email Address *</label>
+            <label htmlFor="email">Email Address</label>
             <input
               type="email"
               id="email"
@@ -240,12 +187,7 @@ function Settings() {
               value={settingsData.email}
               onChange={handleInputChange}
               placeholder="Enter email address"
-              required
-              disabled={isUpdatingProfile}
             />
-            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px' }}>
-              ⚠️ Changing your email will require verification
-            </small>
           </div>
           <div className="form-group">
             <label htmlFor="phone">Phone Number</label>
@@ -256,16 +198,9 @@ function Settings() {
               value={settingsData.phone}
               onChange={handleInputChange}
               placeholder="Enter phone number"
-              disabled={isUpdatingProfile}
             />
           </div>
-          <button 
-            type="submit" 
-            className="save-btn"
-            disabled={isUpdatingProfile}
-          >
-            {isUpdatingProfile ? 'Updating...' : 'Save Profile'}
-          </button>
+          <button type="submit" className="save-btn">Save Profile</button>
         </form>
       </div>
 
