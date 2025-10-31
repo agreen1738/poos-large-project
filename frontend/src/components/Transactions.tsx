@@ -188,8 +188,6 @@ function Transactions() {
         accountId: accounts.length > 0 ? accounts[0]._id : '',
         date: new Date().toISOString().split('T')[0]
       });
-      
-      alert('Transaction added successfully!');
     } catch (error: any) {
       alert('Failed to add transaction: ' + error.message);
     }
@@ -205,8 +203,6 @@ function Transactions() {
       // Refresh transactions and accounts list
       await fetchTransactions();
       await fetchAccounts();
-      
-      alert('Transaction deleted successfully!');
     } catch (error: any) {
       alert('Failed to delete transaction: ' + error.message);
     } finally {

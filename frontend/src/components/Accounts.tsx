@@ -31,8 +31,6 @@ function Accounts() {
       setAccounts(data);
     } catch (error: any) {
       console.error('Error fetching accounts:', error);
-      // Show error to user
-      alert(error.message || 'Failed to load accounts');
     } finally {
       setLoading(false);
     }
@@ -71,8 +69,6 @@ function Accounts() {
         accountInstitution: '',
         balance: '0.00'
       });
-      
-      alert('Account added successfully!');
     } catch (error: any) {
       alert(error.message || 'Failed to add account');
     }
@@ -95,8 +91,6 @@ function Accounts() {
       // Close modal and reset
       setShowDeleteModal(false);
       setAccountToDelete(null);
-      
-      alert('Account deleted successfully!');
     } catch (error: any) {
       alert(error.message || 'Failed to delete account');
     }
