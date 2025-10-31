@@ -64,6 +64,38 @@
   font-size: 18px;
 }
 
+.error-state {
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  color: #c33;
+}
+
+.error-state p {
+  margin: 0;
+  font-size: 16px;
+}
+
+.no-data-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.no-data-state p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.no-data-state p:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  color: #666;
+}
+
 .analytics-content {
   display: grid;
   grid-template-columns: 1fr 1fr;

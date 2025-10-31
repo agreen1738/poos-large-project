@@ -37,11 +37,6 @@ function Transactions() {
     fetchTransactions();
   }, [currentDate]);
 
-  useEffect(() => {
-    console.log('Transactions state updated:', transactions.length, 'transactions');
-    console.log('Current month:', currentDate.getMonth() + 1, 'Year:', currentDate.getFullYear());
-  }, [transactions, currentDate]);
-
   async function fetchAccounts() {
     try {
       const accountsData = await accountService.getAccounts();
@@ -63,16 +58,13 @@ function Transactions() {
     setLoading(true);
     try {
       const transactionsData = await transactionService.getTransactions();
-      console.log('Raw transactions from backend:', transactionsData);
       // Ensure dates are in YYYY-MM-DD format
       const formattedTransactions = transactionsData.map(t => ({
         ...t,
         date: new Date(t.date).toISOString().split('T')[0]
       }));
-      console.log('Formatted transactions:', formattedTransactions);
       setTransactions(formattedTransactions);
     } catch (error) {
-      console.log('Error fetching transactions:', error);
       // Use sample data for testing
       setTransactions([
         { id: 1, date: '2025-10-04', name: 'Uniqlo', amount: 158.67, category: 'Hobbies', type: 'expense' },
@@ -101,13 +93,6 @@ function Transactions() {
   const getTransactionsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayTransactions = transactions.filter(t => t.date === dateStr);
-    // Debug logging
-    if (day === 1) {
-      console.log(`Checking day ${day}:`);
-      console.log('  Looking for:', dateStr);
-      console.log('  All transaction dates:', transactions.map(t => t.date));
-      console.log('  Matches found:', dayTransactions.length);
-    }
     return dayTransactions;
   };
 
