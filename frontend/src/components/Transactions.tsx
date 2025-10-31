@@ -1,67 +1,85 @@
 // Transactions.tsx - Transactions page with calendar and list
 import { useState, useEffect } from 'react';
+import accountService from '../services/accountService';
+import transactionService from '../services/transactionService';
+import type { Transaction } from '../services/transactionService';
 import './Transactions.css';
 
-interface Transaction {
-  id: number;
-  date: string;
-  name: string;
-  amount: number;
-  category: string;
+interface Account {
+  _id: string;
+  accountName: string;
+  accountType: string;
+  balanace: number;
 }
 
 function Transactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedFormDate, setSelectedFormDate] = useState(new Date());
   
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
     category: 'Living',
+    accountId: '',
     date: new Date().toISOString().split('T')[0]
   });
 
   useEffect(() => {
+    fetchAccounts();
     fetchTransactions();
   }, [currentDate]);
+
+  useEffect(() => {
+    console.log('Transactions state updated:', transactions.length, 'transactions');
+    console.log('Current month:', currentDate.getMonth() + 1, 'Year:', currentDate.getFullYear());
+  }, [transactions, currentDate]);
+
+  async function fetchAccounts() {
+    try {
+      const accountsData = await accountService.getAccounts();
+      setAccounts(accountsData);
+      
+      // Set first account as default if available
+      if (accountsData.length > 0 && !formData.accountId) {
+        setFormData(prev => ({
+          ...prev,
+          accountId: accountsData[0]._id
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+    }
+  }
 
   async function fetchTransactions() {
     setLoading(true);
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const user = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/transactions`, {
-        method: 'POST',
-        body: JSON.stringify({ 
-          userId: user.id,
-          month: currentDate.getMonth() + 1,
-          year: currentDate.getFullYear()
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setTransactions(res.transactions || []);
-      }
+      const transactionsData = await transactionService.getTransactions();
+      console.log('Raw transactions from backend:', transactionsData);
+      // Ensure dates are in YYYY-MM-DD format
+      const formattedTransactions = transactionsData.map(t => ({
+        ...t,
+        date: new Date(t.date).toISOString().split('T')[0]
+      }));
+      console.log('Formatted transactions:', formattedTransactions);
+      setTransactions(formattedTransactions);
     } catch (error) {
-      console.log('Using sample data for testing');
-      // Sample data for testing
+      console.log('Error fetching transactions:', error);
+      // Use sample data for testing
       setTransactions([
-        { id: 1, date: '2025-10-04', name: 'Uniqlo', amount: 158.67, category: 'Hobbies' },
-        { id: 2, date: '2025-10-04', name: 'Publix', amount: 389.67, category: 'Living' },
-        { id: 3, date: '2025-10-03', name: 'GameStop', amount: 78.13, category: 'Hobbies' },
-        { id: 4, date: '2025-10-15', name: 'Rent Payment', amount: 1200.00, category: 'Living' },
-        { id: 5, date: '2025-10-20', name: 'Savings Deposit', amount: 500.00, category: 'Savings' },
-        { id: 6, date: '2025-10-12', name: 'Restaurant', amount: 45.32, category: 'Living' },
+        { id: 1, date: '2025-10-04', name: 'Uniqlo', amount: 158.67, category: 'Hobbies', type: 'expense' },
+        { id: 2, date: '2025-10-04', name: 'Publix', amount: 389.67, category: 'Living', type: 'expense' },
+        { id: 3, date: '2025-10-03', name: 'GameStop', amount: 78.13, category: 'Hobbies', type: 'expense' },
+        { id: 4, date: '2025-10-15', name: 'Rent Payment', amount: 1200.00, category: 'Living', type: 'expense' },
+        { id: 5, date: '2025-10-20', name: 'Savings Deposit', amount: 500.00, category: 'Savings', type: 'income' },
+        { id: 6, date: '2025-10-12', name: 'Restaurant', amount: 45.32, category: 'Living', type: 'expense' },
       ]);
     } finally {
       setLoading(false);
@@ -81,7 +99,15 @@ function Transactions() {
 
   const getTransactionsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return transactions.filter(t => t.date === dateStr);
+    const dayTransactions = transactions.filter(t => t.date === dateStr);
+    // Debug logging
+    if (day === 1) {
+      console.log(`Checking day ${day}:`);
+      console.log('  Looking for:', dateStr);
+      console.log('  All transaction dates:', transactions.map(t => t.date));
+      console.log('  Matches found:', dayTransactions.length);
+    }
+    return dayTransactions;
   };
 
   const { daysInMonth, startingDayOfWeek } = getDaysInMonth(currentDate);
@@ -103,29 +129,89 @@ function Transactions() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Backend integration will go here
-    console.log('Transaction to be added:', formData);
-    
-    // Close modal and reset form
-    setShowModal(false);
-    setFormData({
-      name: '',
-      amount: '',
-      category: 'Living',
-      date: new Date().toISOString().split('T')[0]
-    });
-    
-    // Show confirmation
-    alert('Transaction will be added when backend is ready!');
+  const handleDateSelect = (day: number) => {
+    const selected = new Date(selectedFormDate.getFullYear(), selectedFormDate.getMonth(), day);
+    const dateStr = selected.toISOString().split('T')[0];
+    setFormData(prev => ({
+      ...prev,
+      date: dateStr
+    }));
+    setShowDatePicker(false);
   };
+
+  const previousFormMonth = () => {
+    setSelectedFormDate(new Date(selectedFormDate.getFullYear(), selectedFormDate.getMonth() - 1));
+  };
+
+  const nextFormMonth = () => {
+    setSelectedFormDate(new Date(selectedFormDate.getFullYear(), selectedFormDate.getMonth() + 1));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.accountId) {
+      alert('Please select an account');
+      return;
+    }
+
+    try {
+      // Convert amount to negative if it's positive (spending money)
+      const amount = Math.abs(parseFloat(formData.amount)) * -1;
+      
+      await transactionService.createTransaction(formData.accountId, {
+        name: formData.name,
+        amount: amount,
+        category: formData.category,
+        type: 'expense',
+        date: new Date(formData.date)
+      });
+      
+      // Refresh transactions and accounts list
+      await fetchTransactions();
+      await fetchAccounts();
+      
+      // Close modal and reset form
+      setShowModal(false);
+      setFormData({
+        name: '',
+        amount: '',
+        category: 'Living',
+        accountId: accounts.length > 0 ? accounts[0]._id : '',
+        date: new Date().toISOString().split('T')[0]
+      });
+      
+      alert('Transaction added successfully!');
+    } catch (error: any) {
+      alert('Failed to add transaction: ' + error.message);
+    }
+  };
+
+  const getFormDateDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+
+    return { daysInMonth, startingDayOfWeek };
+  };
+
+  // Format date string (YYYY-MM-DD) to display format without timezone issues
+  const formatDateForDisplay = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-');
+    return `${month}/${day}/${year}`;
+  };
+
+  const { daysInMonth: formDaysInMonth, startingDayOfWeek: formStartingDay } = getFormDateDaysInMonth(selectedFormDate);
 
   return (
     <>
@@ -214,23 +300,28 @@ function Transactions() {
                     <tr>
                       <th>Date</th>
                       <th>Name</th>
+                      <th>Account</th>
                       <th>Category</th>
                       <th>Amount</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((transaction) => (
-                      <tr key={transaction.id}>
-                        <td>{new Date(transaction.date).toLocaleDateString()}</td>
-                        <td>{transaction.name}</td>
-                        <td>
-                          <span className={`category-badge category-${transaction.category.toLowerCase()}`}>
-                            {transaction.category}
-                          </span>
-                        </td>
-                        <td className="amount-cell">${transaction.amount.toFixed(2)}</td>
-                      </tr>
-                    ))}
+                    {filteredTransactions.map((transaction) => {
+                      const account = accounts.find(a => a._id === transaction.accountId);
+                      return (
+                        <tr key={transaction._id || transaction.id}>
+                          <td>{transaction.date}</td>
+                          <td>{transaction.name}</td>
+                          <td>{account ? account.accountName : 'Unknown'}</td>
+                          <td>
+                            <span className={`category-badge category-${transaction.category.toLowerCase()}`}>
+                              {transaction.category}
+                            </span>
+                          </td>
+                          <td className="amount-cell">${Math.abs(transaction.amount).toFixed(2)}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               ) : (
@@ -254,6 +345,24 @@ function Transactions() {
             
             <form onSubmit={handleSubmit} className="transaction-form">
               <div className="form-group">
+                <label htmlFor="accountId">Account</label>
+                <select
+                  id="accountId"
+                  name="accountId"
+                  value={formData.accountId}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Select an account</option>
+                  {accounts.map((account) => (
+                    <option key={account._id} value={account._id}>
+                      {account.accountName} (${account.balanace.toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="name">Transaction Name</label>
                 <input
                   type="text"
@@ -267,7 +376,7 @@ function Transactions() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="amount">Amount</label>
+                <label htmlFor="amount">Amount (will be deducted from account)</label>
                 <input
                   type="number"
                   id="amount"
@@ -279,6 +388,7 @@ function Transactions() {
                   min="0"
                   required
                 />
+                <small className="amount-helper">Enter positive number - will be automatically deducted</small>
               </div>
 
               <div className="form-group">
@@ -299,14 +409,61 @@ function Transactions() {
 
               <div className="form-group">
                 <label htmlFor="date">Date</label>
-                <input
-                  type="date"
-                  id="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  required
-                />
+                <div className="date-picker-wrapper">
+                  <input
+                    type="text"
+                    id="date"
+                    value={formatDateForDisplay(formData.date)}
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    readOnly
+                    className="date-input"
+                    required
+                  />
+                  <img src="/images/calendar.png" alt="Calendar" className="calendar-icon" onClick={() => setShowDatePicker(!showDatePicker)} />
+                </div>
+
+                {/* Custom Date Picker */}
+                {showDatePicker && (
+                  <div className="custom-date-picker">
+                    <div className="date-picker-header">
+                      <button type="button" onClick={previousFormMonth} className="date-nav-btn">←</button>
+                      <span className="date-picker-title">
+                        {monthNames[selectedFormDate.getMonth()]} {selectedFormDate.getFullYear()}
+                      </span>
+                      <button type="button" onClick={nextFormMonth} className="date-nav-btn">→</button>
+                    </div>
+
+                    <div className="date-picker-grid">
+                      <div className="date-picker-weekday">S</div>
+                      <div className="date-picker-weekday">M</div>
+                      <div className="date-picker-weekday">T</div>
+                      <div className="date-picker-weekday">W</div>
+                      <div className="date-picker-weekday">T</div>
+                      <div className="date-picker-weekday">F</div>
+                      <div className="date-picker-weekday">S</div>
+
+                      {[...Array(formStartingDay)].map((_, index) => (
+                        <div key={`empty-${index}`} className="date-picker-day empty"></div>
+                      ))}
+
+                      {[...Array(formDaysInMonth)].map((_, index) => {
+                        const day = index + 1;
+                        const isSelectedDay = formData.date === 
+                          `${selectedFormDate.getFullYear()}-${String(selectedFormDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        
+                        return (
+                          <div
+                            key={day}
+                            className={`date-picker-day ${isSelectedDay ? 'selected' : ''}`}
+                            onClick={() => handleDateSelect(day)}
+                          >
+                            {day}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">

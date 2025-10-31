@@ -9,10 +9,13 @@ function Accounts() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   
-  // Form state
+  // Form state - includes all 5 required fields
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'Checking'
+    accountName: '',
+    accountType: 'Checking',
+    accountNumber: '',
+    accountInstitution: '',
+    balance: '0.00'
   });
 
   useEffect(() => {
@@ -45,10 +48,13 @@ function Accounts() {
     e.preventDefault();
     
     try {
-      // Create account using service
+      // Create account using service with all required fields
       await accountService.createAccount({
-        name: formData.name,
-        type: formData.type
+        accountName: formData.accountName,
+        accountType: formData.accountType,
+        accountNumber: parseInt(formData.accountNumber),
+        accountInstitution: formData.accountInstitution,
+        balance: parseFloat(formData.balance)
       });
       
       // Refresh accounts list
@@ -57,8 +63,11 @@ function Accounts() {
       // Close modal and reset form
       setShowModal(false);
       setFormData({
-        name: '',
-        type: 'Checking'
+        accountName: '',
+        accountType: 'Checking',
+        accountNumber: '',
+        accountInstitution: '',
+        balance: '0.00'
       });
       
       alert('Account added successfully!');
@@ -114,6 +123,14 @@ function Accounts() {
                     </div>
                     <div className="account-card-body">
                       <div className="account-info">
+                        <span className="info-label">Account Number</span>
+                        <span className="info-value">****{account.accountNumber.toString().slice(-4)}</span>
+                      </div>
+                      <div className="account-info">
+                        <span className="info-label">Institution</span>
+                        <span className="info-value">{account.accountInstitution}</span>
+                      </div>
+                      <div className="account-info">
                         <span className="info-label">Currency</span>
                         <span className="info-value">{account.currency}</span>
                       </div>
@@ -151,12 +168,12 @@ function Accounts() {
             
             <form onSubmit={handleSubmit} className="account-form">
               <div className="form-group">
-                <label htmlFor="name">Account Name</label>
+                <label htmlFor="accountName">Account Name</label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
+                  id="accountName"
+                  name="accountName"
+                  value={formData.accountName}
                   onChange={handleInputChange}
                   placeholder="e.g., My Checking Account"
                   required
@@ -164,11 +181,11 @@ function Accounts() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="type">Account Type</label>
+                <label htmlFor="accountType">Account Type</label>
                 <select
-                  id="type"
-                  name="type"
-                  value={formData.type}
+                  id="accountType"
+                  name="accountType"
+                  value={formData.accountType}
                   onChange={handleInputChange}
                   required
                 >
@@ -178,6 +195,46 @@ function Accounts() {
                   <option value="Investment">Investment</option>
                   <option value="Other">Other</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="accountNumber">Account Number</label>
+                <input
+                  type="number"
+                  id="accountNumber"
+                  name="accountNumber"
+                  value={formData.accountNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 1234567890"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="accountInstitution">Financial Institution</label>
+                <input
+                  type="text"
+                  id="accountInstitution"
+                  name="accountInstitution"
+                  value={formData.accountInstitution}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Chase Bank, Wells Fargo"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="balance">Initial Balance</label>
+                <input
+                  type="number"
+                  id="balance"
+                  name="balance"
+                  value={formData.balance}
+                  onChange={handleInputChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  required
+                />
               </div>
 
               <div className="modal-actions">

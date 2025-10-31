@@ -6,6 +6,8 @@ export interface Account {
   userId: string;
   accountName: string;
   accountType: string;
+  accountNumber: number;
+  accountInstitution: string;
   balanace: number; // Note: backend has typo "balanace"
   currency: string;
   isActive: boolean;
@@ -14,8 +16,11 @@ export interface Account {
 }
 
 export interface CreateAccountData {
-  name: string; // Maps to accountName in backend
-  type: string; // Maps to accountType in backend
+  accountName: string;
+  accountType: string;
+  accountNumber: number;
+  accountInstitution: string;
+  balance: number;
 }
 
 export interface UpdateAccountData {
@@ -41,6 +46,8 @@ class AccountService {
   // Create a new account
   async createAccount(data: CreateAccountData): Promise<void> {
     try {
+      // Backend expects exactly these 5 fields:
+      // accountName, accountType, accountNumber, accountInstitution, balance
       await api.post('/account', data);
       // Backend returns success message, not the created account
     } catch (error: any) {
