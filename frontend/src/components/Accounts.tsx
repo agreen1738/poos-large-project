@@ -8,6 +8,8 @@ function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
   
   // Form state - includes all 5 required fields
   const [formData, setFormData] = useState({
@@ -76,6 +78,35 @@ function Accounts() {
     }
   };
 
+  const handleDeleteClick = (accountId: string, accountName: string) => {
+    setAccountToDelete({ id: accountId, name: accountName });
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!accountToDelete) return;
+
+    try {
+      await accountService.deleteAccount(accountToDelete.id);
+      
+      // Refresh accounts list
+      await fetchAccounts();
+      
+      // Close modal and reset
+      setShowDeleteModal(false);
+      setAccountToDelete(null);
+      
+      alert('Account deleted successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete account');
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setAccountToDelete(null);
+  };
+
   const getTotalBalance = () => {
     return accounts.reduce((sum, account) => sum + (account.balanace || 0), 0);
   };
@@ -120,6 +151,13 @@ function Accounts() {
                         {account.accountType}
                       </div>
                       <h4>{account.accountName}</h4>
+                      <button 
+                        className="account-delete-btn"
+                        onClick={() => handleDeleteClick(account._id, account.accountName)}
+                        title="Delete account"
+                      >
+                        Delete
+                      </button>
                     </div>
                     <div className="account-card-body">
                       <div className="account-info">
@@ -163,7 +201,7 @@ function Accounts() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Account</h2>
-              <button className="modal-close-btn" onClick={() => setShowModal(false)}>×</button>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)}>Ã—</button>
             </div>
             
             <form onSubmit={handleSubmit} className="account-form">
@@ -246,6 +284,32 @@ function Accounts() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && accountToDelete && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Delete Account</h2>
+              <button className="modal-close-btn" onClick={handleCancelDelete}>×</button>
+            </div>
+            
+            <div className="delete-modal-body">
+              <p>Are you sure you want to delete the account <strong>"{accountToDelete.name}"</strong>?</p>
+              <p className="warning-text">This action cannot be undone.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={handleCancelDelete} className="cancel-btn">
+                No, Cancel
+              </button>
+              <button onClick={handleConfirmDelete} className="delete-confirm-btn">
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

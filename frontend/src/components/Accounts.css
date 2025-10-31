@@ -453,3 +453,71 @@
 .modal-content::-webkit-scrollbar-thumb:hover {
   background: #999;
 }
+/* Account delete button */
+.account-delete-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.account-delete-btn:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+}
+
+.account-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-card-header h4 {
+  flex: 1;
+}
+
+/* Delete confirmation modal */
+.delete-modal {
+  max-width: 450px;
+}
+
+.delete-modal-body {
+  padding: 20px 0;
+}
+
+.delete-modal-body p {
+  margin: 10px 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.warning-text {
+  color: #dc3545;
+  font-weight: 600;
+  font-size: 14px !important;
+}
+
+.delete-confirm-btn {
+  flex: 1;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #dc3545;
+  color: white;
+}
+
+.delete-confirm-btn:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}

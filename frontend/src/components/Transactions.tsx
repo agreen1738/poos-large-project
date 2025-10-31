@@ -21,6 +21,7 @@ function Transactions() {
   const [showModal, setShowModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedFormDate, setSelectedFormDate] = useState(new Date());
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -194,6 +195,25 @@ function Transactions() {
     }
   };
 
+  const handleDeleteTransaction = async (accountId: string, transactionId: string) => {
+    if (deletingTransactionId) return; // Prevent multiple deletes
+    
+    setDeletingTransactionId(transactionId);
+    try {
+      await transactionService.deleteTransaction(accountId, transactionId);
+      
+      // Refresh transactions and accounts list
+      await fetchTransactions();
+      await fetchAccounts();
+      
+      alert('Transaction deleted successfully!');
+    } catch (error: any) {
+      alert('Failed to delete transaction: ' + error.message);
+    } finally {
+      setDeletingTransactionId(null);
+    }
+  };
+
   const getFormDateDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -299,10 +319,10 @@ function Transactions() {
                   <thead>
                     <tr>
                       <th>Date</th>
-                      <th>Name</th>
                       <th>Account</th>
                       <th>Category</th>
                       <th>Amount</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -311,7 +331,6 @@ function Transactions() {
                       return (
                         <tr key={transaction._id || transaction.id}>
                           <td>{transaction.date}</td>
-                          <td>{transaction.name}</td>
                           <td>{account ? account.accountName : 'Unknown'}</td>
                           <td>
                             <span className={`category-badge category-${transaction.category.toLowerCase()}`}>
@@ -319,6 +338,16 @@ function Transactions() {
                             </span>
                           </td>
                           <td className="amount-cell">${Math.abs(transaction.amount).toFixed(2)}</td>
+                          <td className="actions-cell">
+                            <button 
+                              className="delete-btn"
+                              onClick={() => handleDeleteTransaction(transaction.accountId as string, transaction._id as string)}
+                              disabled={deletingTransactionId === transaction._id}
+                              title="Delete transaction"
+                            >
+                              <img src="/images/trash.png" alt="Delete" />
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
