@@ -1,81 +1,88 @@
-// src/services/accountService.ts - Account service
+// src/services/transactionService.ts - Transaction service for managing transactions
 import api from './api';
 
-export interface Account {
-  id: string;
-  name: string;
+export interface Transaction {
+  _id?: string;
+  id?: number;
+  userId?: string;
+  accountId?: string;
+  amount: number;
+  category: string;
   type: string;
-  balance: number;
-  accountNumber: string;
-  institution: string;
-  userId: string;
-}
-
-export interface CreateAccountData {
-  name: string;
-  type: string;
-  balance: number;
-  accountNumber: string;
-  institution: string;
-}
-
-export interface UpdateAccountData {
+  date: string;  // Changed from Date to string for frontend compatibility
   name?: string;
-  type?: string;
-  balance?: number;
-  accountNumber?: string;
-  institution?: string;
 }
 
-class AccountService {
-  // Get all accounts for the logged-in user
-  async getAccounts(): Promise<Account[]> {
+export interface CreateTransactionData {
+  name: string;
+  amount: number;
+  category: string;
+  type: string;
+  date: Date;
+}
+
+class TransactionService {
+  // Get all transactions for the logged-in user
+  async getTransactions(): Promise<Transaction[]> {
     try {
-      const response = await api.get('/accounts');
-      return response.data.accounts || response.data;
+      const response = await api.get('/transactions');
+      return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch accounts');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch transactions';
+      throw new Error(errorMessage);
     }
   }
 
-  // Get a single account by ID
-  async getAccountById(id: string): Promise<Account> {
+  // Get transactions for a specific account
+  async getAccountTransactions(accountId: string): Promise<Transaction[]> {
     try {
-      const response = await api.get(`/accounts/${id}`);
-      return response.data.account || response.data;
+      const response = await api.get(`/transactions/${accountId}`);
+      return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to fetch account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch account transactions';
+      throw new Error(errorMessage);
     }
   }
 
-  // Create a new account
-  async createAccount(data: CreateAccountData): Promise<Account> {
+  // Get a single transaction
+  async getTransaction(accountId: string, transactionId: string): Promise<Transaction> {
     try {
-      const response = await api.post('/account', data);
-      return response.data.account || response.data;
+      const response = await api.get(`/transactions/${accountId}/${transactionId}`);
+      return response.data;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to fetch transaction';
+      throw new Error(errorMessage);
     }
   }
 
-  // Update an existing account
-  async updateAccount(id: string, data: UpdateAccountData): Promise<Account> {
+  // Create a new transaction and update account balance
+  async createTransaction(accountId: string, data: CreateTransactionData): Promise<void> {
     try {
-      const response = await api.put(`/account/${id}`, data);
-      return response.data.account || response.data;
+      // Backend expects: amount, category, type, date
+      // The amount should already be negative from the frontend
+      await api.post(`/transactions/${accountId}`, {
+        amount: data.amount,
+        category: data.category,
+        type: data.type,
+        date: data.date
+      });
+      // Backend automatically updates the account balance
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to update account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to create transaction';
+      throw new Error(errorMessage);
     }
   }
 
-  // Delete an account
-  async deleteAccount(id: string): Promise<void> {
+  // Delete a transaction and restore account balance
+  async deleteTransaction(accountId: string, transactionId: string): Promise<void> {
     try {
-      await api.delete(`/account/${id}`);
+      await api.delete(`/transactions/${accountId}/${transactionId}`);
+      // Backend automatically restores the account balance
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to delete account');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to delete transaction';
+      throw new Error(errorMessage);
     }
   }
 }
 
-export default new AccountService();
+export default new TransactionService();

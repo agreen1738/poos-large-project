@@ -8,11 +8,16 @@ function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
   
-  // Form state
+  // Form state - includes all 5 required fields
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'Checking'
+    accountName: '',
+    accountType: 'Checking',
+    accountNumber: '',
+    accountInstitution: '',
+    balance: '0.00'
   });
 
   useEffect(() => {
@@ -26,8 +31,6 @@ function Accounts() {
       setAccounts(data);
     } catch (error: any) {
       console.error('Error fetching accounts:', error);
-      // Show error to user
-      alert(error.message || 'Failed to load accounts');
     } finally {
       setLoading(false);
     }
@@ -45,10 +48,13 @@ function Accounts() {
     e.preventDefault();
     
     try {
-      // Create account using service
+      // Create account using service with all required fields
       await accountService.createAccount({
-        name: formData.name,
-        type: formData.type
+        accountName: formData.accountName,
+        accountType: formData.accountType,
+        accountNumber: parseInt(formData.accountNumber),
+        accountInstitution: formData.accountInstitution,
+        balance: parseFloat(formData.balance)
       });
       
       // Refresh accounts list
@@ -57,14 +63,42 @@ function Accounts() {
       // Close modal and reset form
       setShowModal(false);
       setFormData({
-        name: '',
-        type: 'Checking'
+        accountName: '',
+        accountType: 'Checking',
+        accountNumber: '',
+        accountInstitution: '',
+        balance: '0.00'
       });
-      
-      alert('Account added successfully!');
     } catch (error: any) {
       alert(error.message || 'Failed to add account');
     }
+  };
+
+  const handleDeleteClick = (accountId: string, accountName: string) => {
+    setAccountToDelete({ id: accountId, name: accountName });
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!accountToDelete) return;
+
+    try {
+      await accountService.deleteAccount(accountToDelete.id);
+      
+      // Refresh accounts list
+      await fetchAccounts();
+      
+      // Close modal and reset
+      setShowDeleteModal(false);
+      setAccountToDelete(null);
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete account');
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setAccountToDelete(null);
   };
 
   const getTotalBalance = () => {
@@ -111,8 +145,23 @@ function Accounts() {
                         {account.accountType}
                       </div>
                       <h4>{account.accountName}</h4>
+                      <button 
+                        className="account-delete-btn"
+                        onClick={() => handleDeleteClick(account._id, account.accountName)}
+                        title="Delete account"
+                      >
+                        Delete
+                      </button>
                     </div>
                     <div className="account-card-body">
+                      <div className="account-info">
+                        <span className="info-label">Account Number</span>
+                        <span className="info-value">****{account.accountNumber.toString().slice(-4)}</span>
+                      </div>
+                      <div className="account-info">
+                        <span className="info-label">Institution</span>
+                        <span className="info-value">{account.accountInstitution}</span>
+                      </div>
                       <div className="account-info">
                         <span className="info-label">Currency</span>
                         <span className="info-value">{account.currency}</span>
@@ -146,17 +195,17 @@ function Accounts() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Account</h2>
-              <button className="modal-close-btn" onClick={() => setShowModal(false)}>×</button>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)}>Ã—</button>
             </div>
             
             <form onSubmit={handleSubmit} className="account-form">
               <div className="form-group">
-                <label htmlFor="name">Account Name</label>
+                <label htmlFor="accountName">Account Name</label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
+                  id="accountName"
+                  name="accountName"
+                  value={formData.accountName}
                   onChange={handleInputChange}
                   placeholder="e.g., My Checking Account"
                   required
@@ -164,11 +213,11 @@ function Accounts() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="type">Account Type</label>
+                <label htmlFor="accountType">Account Type</label>
                 <select
-                  id="type"
-                  name="type"
-                  value={formData.type}
+                  id="accountType"
+                  name="accountType"
+                  value={formData.accountType}
                   onChange={handleInputChange}
                   required
                 >
@@ -180,6 +229,46 @@ function Accounts() {
                 </select>
               </div>
 
+              <div className="form-group">
+                <label htmlFor="accountNumber">Account Number</label>
+                <input
+                  type="number"
+                  id="accountNumber"
+                  name="accountNumber"
+                  value={formData.accountNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 1234567890"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="accountInstitution">Financial Institution</label>
+                <input
+                  type="text"
+                  id="accountInstitution"
+                  name="accountInstitution"
+                  value={formData.accountInstitution}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Chase Bank, Wells Fargo"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="balance">Initial Balance</label>
+                <input
+                  type="number"
+                  id="balance"
+                  name="balance"
+                  value={formData.balance}
+                  onChange={handleInputChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  required
+                />
+              </div>
+
               <div className="modal-actions">
                 <button type="button" onClick={() => setShowModal(false)} className="cancel-btn">
                   Cancel
@@ -189,6 +278,32 @@ function Accounts() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && accountToDelete && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Delete Account</h2>
+              <button className="modal-close-btn" onClick={handleCancelDelete}>×</button>
+            </div>
+            
+            <div className="delete-modal-body">
+              <p>Are you sure you want to delete the account <strong>"{accountToDelete.name}"</strong>?</p>
+              <p className="warning-text">This action cannot be undone.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={handleCancelDelete} className="cancel-btn">
+                No, Cancel
+              </button>
+              <button onClick={handleConfirmDelete} className="delete-confirm-btn">
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
