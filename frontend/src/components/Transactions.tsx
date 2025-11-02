@@ -305,64 +305,77 @@ function Transactions() {
       `}</style>
 
       <div className="transactions-page">
-        <div className="transactions-header">
-          <h2>Transactions</h2>
-          <button className="add-transaction-btn" onClick={() => setShowModal(true)}>
-            + Add Transaction
-          </button>
+        {/* Calendar Section */}
+        <div className="calendar-section">
+          <div className="calendar-header">
+            <button onClick={previousMonth} className="calendar-nav-btn">←</button>
+            <h3>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+            <button onClick={nextMonth} className="calendar-nav-btn">→</button>
+          </div>
+
+          <div className="calendar-grid">
+            <div className="calendar-weekday">Sun</div>
+            <div className="calendar-weekday">Mon</div>
+            <div className="calendar-weekday">Tue</div>
+            <div className="calendar-weekday">Wed</div>
+            <div className="calendar-weekday">Thu</div>
+            <div className="calendar-weekday">Fri</div>
+            <div className="calendar-weekday">Sat</div>
+
+            {[...Array(startingDayOfWeek)].map((_, index) => (
+              <div key={`empty-${index}`} className="calendar-day empty"></div>
+            ))}
+
+            {[...Array(daysInMonth)].map((_, index) => {
+              const day = index + 1;
+              const dayTransactions = getTransactionsForDate(day);
+              const hasTransactions = dayTransactions.length > 0;
+              const isSelected = selectedDate?.getDate() === day && 
+                                selectedDate?.getMonth() === currentDate.getMonth() &&
+                                selectedDate?.getFullYear() === currentDate.getFullYear();
+
+              return (
+                <div
+                  key={day}
+                  className={`calendar-day ${hasTransactions ? 'has-transactions' : ''} ${isSelected ? 'selected' : ''}`}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedDate(null);
+                    } else {
+                      setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+                    }
+                  }}
+                >
+                  <span className="day-number">{day}</span>
+                  {hasTransactions && (
+                    <div className="transaction-indicator">
+                      {dayTransactions.length}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="transactions-content">
-          {/* Calendar Section */}
-          <div className="calendar-section">
-            <div className="calendar-header">
-              <button onClick={previousMonth} className="calendar-nav-btn">←</button>
-              <h3>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
-              <button onClick={nextMonth} className="calendar-nav-btn">→</button>
-            </div>
-
-            <div className="calendar-grid">
-              <div className="calendar-weekday">Sun</div>
-              <div className="calendar-weekday">Mon</div>
-              <div className="calendar-weekday">Tue</div>
-              <div className="calendar-weekday">Wed</div>
-              <div className="calendar-weekday">Thu</div>
-              <div className="calendar-weekday">Fri</div>
-              <div className="calendar-weekday">Sat</div>
-
-              {[...Array(startingDayOfWeek)].map((_, index) => (
-                <div key={`empty-${index}`} className="calendar-day empty"></div>
-              ))}
-
-              {[...Array(daysInMonth)].map((_, index) => {
-                const day = index + 1;
-                const dayTransactions = getTransactionsForDate(day);
-                const hasTransactions = dayTransactions.length > 0;
-                const isSelected = selectedDate?.getDate() === day && 
-                                  selectedDate?.getMonth() === currentDate.getMonth() &&
-                                  selectedDate?.getFullYear() === currentDate.getFullYear();
-
-                return (
-                  <div
-                    key={day}
-                    className={`calendar-day ${hasTransactions ? 'has-transactions' : ''} ${isSelected ? 'selected' : ''}`}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedDate(null);
-                      } else {
-                        setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
-                      }
-                    }}
-                  >
-                    <span className="day-number">{day}</span>
-                    {hasTransactions && (
-                      <div className="transaction-indicator">
-                        {dayTransactions.length}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+        {/* Transactions List Section */}
+        <div className="transactions-list-section">
+          <div className="transactions-list-header">
+            <h3>
+              {selectedDate 
+                ? `Transactions on ${monthNames[selectedDate.getMonth()]} ${selectedDate.getDate()}`
+                : 'All Recent Transactions'
+              }
+            </h3>
+            <div className="header-buttons">
+              {selectedDate && (
+                <button onClick={() => setSelectedDate(null)} className="clear-filter-btn">
+                  Show All
+                </button>
+              )}
+              <button onClick={() => setShowModal(true)} className="add-transaction-btn">
+                + Add Transaction
+              </button>
             </div>
           </div>
 
