@@ -12,6 +12,11 @@ interface Account {
   balanace: number;
 }
 
+interface Notification {
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 function Transactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -22,6 +27,7 @@ function Transactions() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedFormDate, setSelectedFormDate] = useState(new Date());
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<Notification | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -36,6 +42,20 @@ function Transactions() {
     fetchAccounts();
     fetchTransactions();
   }, [currentDate]);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+  };
 
   async function fetchAccounts() {
     try {
@@ -144,7 +164,7 @@ function Transactions() {
     e.preventDefault();
     
     if (!formData.accountId) {
-      alert('Please select an account');
+      showNotification('error', 'Please select an account');
       return;
     }
 
@@ -173,8 +193,10 @@ function Transactions() {
         accountId: accounts.length > 0 ? accounts[0]._id : '',
         date: new Date().toISOString().split('T')[0]
       });
+
+      showNotification('success', 'Transaction added successfully!');
     } catch (error: any) {
-      alert('Failed to add transaction: ' + error.message);
+      showNotification('error', error.message || 'Failed to add transaction');
     }
   };
 
@@ -188,8 +210,10 @@ function Transactions() {
       // Refresh transactions and accounts list
       await fetchTransactions();
       await fetchAccounts();
+
+      showNotification('success', 'Transaction deleted successfully!');
     } catch (error: any) {
-      alert('Failed to delete transaction: ' + error.message);
+      showNotification('error', error.message || 'Failed to delete transaction');
     } finally {
       setDeletingTransactionId(null);
     }
@@ -206,88 +230,139 @@ function Transactions() {
     return { daysInMonth, startingDayOfWeek };
   };
 
-  // Format date string (YYYY-MM-DD) to display format without timezone issues
-  const formatDateForDisplay = (dateStr: string) => {
-    const [year, month, day] = dateStr.split('-');
-    return `${month}/${day}/${year}`;
-  };
-
   const { daysInMonth: formDaysInMonth, startingDayOfWeek: formStartingDay } = getFormDateDaysInMonth(selectedFormDate);
+
+  const formatDateForDisplay = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  };
 
   return (
     <>
+      {/* Notification Toast */}
+      {notification && (
+        <div 
+          className={`notification-toast notification-${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 9999,
+            minWidth: '300px',
+            maxWidth: '500px',
+            animation: 'slideIn 0.3s ease-out',
+            backgroundColor: notification.type === 'success' ? '#d4edda' : 
+                           notification.type === 'error' ? '#f8d7da' : '#d1ecf1',
+            color: notification.type === 'success' ? '#155724' : 
+                   notification.type === 'error' ? '#721c24' : '#0c5460',
+            border: `1px solid ${notification.type === 'success' ? '#c3e6cb' : 
+                                 notification.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notification.type === 'success' && <span>✓</span>}
+            {notification.type === 'error' && <span>✗</span>}
+            {notification.type === 'info' && <span>ℹ</span>}
+            {notification.message}
+          </span>
+          <button 
+            onClick={() => setNotification(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: '0 0 0 16px',
+              opacity: 0.7
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Add CSS animation */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
       <div className="transactions-page">
-        {/* Calendar Section */}
-        <div className="calendar-section">
-          <div className="calendar-header">
-            <button onClick={previousMonth} className="calendar-nav-btn">←</button>
-            <h3>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
-            <button onClick={nextMonth} className="calendar-nav-btn">→</button>
-          </div>
-
-          <div className="calendar-grid">
-            <div className="calendar-weekday">Sun</div>
-            <div className="calendar-weekday">Mon</div>
-            <div className="calendar-weekday">Tue</div>
-            <div className="calendar-weekday">Wed</div>
-            <div className="calendar-weekday">Thu</div>
-            <div className="calendar-weekday">Fri</div>
-            <div className="calendar-weekday">Sat</div>
-
-            {[...Array(startingDayOfWeek)].map((_, index) => (
-              <div key={`empty-${index}`} className="calendar-day empty"></div>
-            ))}
-
-            {[...Array(daysInMonth)].map((_, index) => {
-              const day = index + 1;
-              const dayTransactions = getTransactionsForDate(day);
-              const hasTransactions = dayTransactions.length > 0;
-              const isSelected = selectedDate?.getDate() === day && 
-                                selectedDate?.getMonth() === currentDate.getMonth() &&
-                                selectedDate?.getFullYear() === currentDate.getFullYear();
-
-              return (
-                <div
-                  key={day}
-                  className={`calendar-day ${hasTransactions ? 'has-transactions' : ''} ${isSelected ? 'selected' : ''}`}
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedDate(null);
-                    } else {
-                      setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
-                    }
-                  }}
-                >
-                  <span className="day-number">{day}</span>
-                  {hasTransactions && (
-                    <div className="transaction-indicator">
-                      {dayTransactions.length}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        <div className="transactions-header">
+          <h2>Transactions</h2>
+          <button className="add-transaction-btn" onClick={() => setShowModal(true)}>
+            + Add Transaction
+          </button>
         </div>
 
-        {/* Transactions List Section */}
-        <div className="transactions-list-section">
-          <div className="transactions-list-header">
-            <h3>
-              {selectedDate 
-                ? `Transactions on ${monthNames[selectedDate.getMonth()]} ${selectedDate.getDate()}`
-                : 'All Recent Transactions'
-              }
-            </h3>
-            <div className="header-buttons">
-              {selectedDate && (
-                <button onClick={() => setSelectedDate(null)} className="clear-filter-btn">
-                  Show All
-                </button>
-              )}
-              <button onClick={() => setShowModal(true)} className="add-transaction-btn">
-                + Add Transaction
-              </button>
+        <div className="transactions-content">
+          {/* Calendar Section */}
+          <div className="calendar-section">
+            <div className="calendar-header">
+              <button onClick={previousMonth} className="calendar-nav-btn">←</button>
+              <h3>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</h3>
+              <button onClick={nextMonth} className="calendar-nav-btn">→</button>
+            </div>
+
+            <div className="calendar-grid">
+              <div className="calendar-weekday">Sun</div>
+              <div className="calendar-weekday">Mon</div>
+              <div className="calendar-weekday">Tue</div>
+              <div className="calendar-weekday">Wed</div>
+              <div className="calendar-weekday">Thu</div>
+              <div className="calendar-weekday">Fri</div>
+              <div className="calendar-weekday">Sat</div>
+
+              {[...Array(startingDayOfWeek)].map((_, index) => (
+                <div key={`empty-${index}`} className="calendar-day empty"></div>
+              ))}
+
+              {[...Array(daysInMonth)].map((_, index) => {
+                const day = index + 1;
+                const dayTransactions = getTransactionsForDate(day);
+                const hasTransactions = dayTransactions.length > 0;
+                const isSelected = selectedDate?.getDate() === day && 
+                                  selectedDate?.getMonth() === currentDate.getMonth() &&
+                                  selectedDate?.getFullYear() === currentDate.getFullYear();
+
+                return (
+                  <div
+                    key={day}
+                    className={`calendar-day ${hasTransactions ? 'has-transactions' : ''} ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedDate(null);
+                      } else {
+                        setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+                      }
+                    }}
+                  >
+                    <span className="day-number">{day}</span>
+                    {hasTransactions && (
+                      <div className="transaction-indicator">
+                        {dayTransactions.length}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

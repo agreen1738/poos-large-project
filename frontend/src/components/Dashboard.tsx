@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
 import authService from '../services/authService';
+import accountService from '../services/accountService';
+import transactionService from '../services/transactionService';
+import analyticsService from '../services/analyticsService';
 import './Dashboard.css';
 import Transactions from './Transactions';
 import Analytics from './Analytics';
@@ -118,8 +121,10 @@ function Dashboard() {
 function DashboardContent() {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Colors for each category
   const COLORS = {
@@ -130,39 +135,57 @@ function DashboardContent() {
   };
 
   useEffect(() => {
-    fetchCategoryData();
-    fetchTransactions();
+    fetchAllData();
   }, [currentDate]);
+
+  async function fetchAllData() {
+    setLoading(true);
+    try {
+      // Fetch all data in parallel
+      await Promise.all([
+        fetchCategoryData(),
+        fetchTransactions(),
+        fetchAccounts()
+      ]);
+    } catch (error) {
+      console.log('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function fetchCategoryData() {
     try {
-      // Use sample data for now since analytics endpoint may not exist yet
-      console.log('Using sample category data');
-      setCategoryData([
-        { name: 'Savings', value: 1200 },
-        { name: 'Living', value: 1500 },
-        { name: 'Hobbies', value: 200 },
-        { name: 'Gambling', value: 100 }
-      ]);
+      const data = await analyticsService.getCategoryAnalytics('all');
+      setCategoryData(data.categories || []);
     } catch (error) {
       console.log('Error loading category data:', error);
+      setCategoryData([]);
     }
   }
 
   async function fetchTransactions() {
     try {
-      // Use sample data for now since transactions endpoint may not exist yet
-      console.log('Using sample transaction data');
-      setTransactions([
-        { id: 1, date: '2025-10-04', name: 'Uniqlo', amount: 158.67, category: 'Hobbies' },
-        { id: 2, date: '2025-10-04', name: 'Publix', amount: 389.67, category: 'Living' },
-        { id: 3, date: '2025-10-03', name: 'GameStop', amount: 78.13, category: 'Hobbies' },
-        { id: 4, date: '2025-10-15', name: 'Rent Payment', amount: 1200.00, category: 'Living' },
-        { id: 5, date: '2025-10-20', name: 'Savings Deposit', amount: 500.00, category: 'Savings' },
-        { id: 6, date: '2025-10-12', name: 'Restaurant', amount: 45.32, category: 'Living' },
-      ]);
+      const transactionsData = await transactionService.getTransactions();
+      // Ensure dates are in YYYY-MM-DD format
+      const formattedTransactions = transactionsData.map(t => ({
+        ...t,
+        date: new Date(t.date).toISOString().split('T')[0]
+      }));
+      setTransactions(formattedTransactions);
     } catch (error) {
       console.log('Error loading transactions:', error);
+      setTransactions([]);
+    }
+  }
+
+  async function fetchAccounts() {
+    try {
+      const accountsData = await accountService.getAccounts();
+      setAccounts(accountsData);
+    } catch (error) {
+      console.log('Error loading accounts:', error);
+      setAccounts([]);
     }
   }
 
@@ -195,66 +218,87 @@ function DashboardContent() {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 
+  // Get recent transactions (last 5)
+  const recentTransactions = [...transactions]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  // Get total balance from all accounts
+  const getTotalBalance = () => {
+    return accounts.reduce((sum, account) => sum + (account.balanace || 0), 0);
+  };
+
+  if (loading) {
+    return (
+      <div className="dashboard-loading">
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-grid">
       {/* Accounts Section */}
       <div className="dashboard-card accounts-card">
         <h3>ACCOUNTS</h3>
         <div className="accounts-list">
-          <div className="account-item">
-            <span>XXXXXXXX</span>
-            <span className="amount">$1,204.45</span>
-          </div>
-          <div className="account-item">
-            <span>XXXXXXXX</span>
-            <span className="amount">$13,901.28</span>
-          </div>
-          <div className="account-item">
-            <span>XXXXXXXX</span>
-            <span className="amount">$67.89</span>
-          </div>
+          {accounts.length > 0 ? (
+            accounts.slice(0, 3).map((account) => (
+              <div key={account._id} className="account-item">
+                <span>****{account.accountNumber.toString().slice(-4)}</span>
+                <span className="amount">${account.balanace.toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="no-data">No accounts found</div>
+          )}
+          {accounts.length > 3 && (
+            <div className="account-item more-accounts">
+              <span>+{accounts.length - 3} more accounts</span>
+              <span className="amount total-label">Total: ${getTotalBalance().toFixed(2)}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Monthly Breakdown Section */}
       <div className="dashboard-card breakdown-card">
         <h3>MONTHLY BREAKDOWN</h3>
-        <div className="chart-container">
-          <PieChart width={280} height={200}>
-            <Pie
-              data={categoryData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-            >
-              {categoryData.map((entry: any, index: number) => (
-                <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+        {categoryData.length > 0 ? (
+          <>
+            <div className="chart-container">
+              <PieChart width={280} height={200}>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+              </PieChart>
+            </div>
+            <div className="chart-legend">
+              {categoryData.map((category) => (
+                <div key={category.name} className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: COLORS[category.name as keyof typeof COLORS] }}></span>
+                  <span>- {category.name} (${category.value.toFixed(2)})</span>
+                </div>
               ))}
-            </Pie>
-            <Tooltip formatter={(value: number) => `${value.toFixed(2)}`} />
-          </PieChart>
-        </div>
-        <div className="chart-legend">
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#FFD700' }}></span>
-            <span>- Savings</span>
+            </div>
+          </>
+        ) : (
+          <div className="no-data">
+            <p>No spending data available</p>
+            <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Add transactions to see breakdown</p>
           </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#4A90E2' }}></span>
-            <span>- Living</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#FF8C42' }}></span>
-            <span>- Hobbies</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#999999' }}></span>
-            <span>- Gambling</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Upcoming Changes Section with Calendar */}
@@ -322,17 +366,25 @@ function DashboardContent() {
               </div>
               <div className="transactions-sidebar-list">
                 {getTransactionsForDate(selectedDate.getDate()).length > 0 ? (
-                  getTransactionsForDate(selectedDate.getDate()).map((transaction) => (
-                    <div key={transaction.id} className="transaction-item-mini">
-                      <div className="transaction-name">{transaction.name}</div>
-                      <div className="transaction-details">
-                        <span className={`category-tag-mini category-${transaction.category.toLowerCase()}`}>
-                          {transaction.category}
-                        </span>
-                        <span className="transaction-amount-mini">${transaction.amount.toFixed(2)}</span>
+                  getTransactionsForDate(selectedDate.getDate()).map((transaction) => {
+                    const account = accounts.find(a => a._id === transaction.accountId);
+                    return (
+                      <div key={transaction._id || transaction.id} className="transaction-item-mini">
+                        <div className="transaction-name">{transaction.name || 'Transaction'}</div>
+                        <div className="transaction-details">
+                          <span className={`category-tag-mini category-${transaction.category.toLowerCase()}`}>
+                            {transaction.category}
+                          </span>
+                          <span className="transaction-amount-mini">${Math.abs(transaction.amount).toFixed(2)}</span>
+                        </div>
+                        {account && (
+                          <div className="transaction-account">
+                            <small>{account.accountName}</small>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="no-transactions-mini">No transactions</div>
                 )}
@@ -345,32 +397,34 @@ function DashboardContent() {
       {/* Recent Transactions Section */}
       <div className="dashboard-card transactions-card">
         <h3>RECENT TRANSACTIONS</h3>
-        <table className="transactions-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Name</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>10/4</td>
-              <td>Uniqlo</td>
-              <td>$158.67</td>
-            </tr>
-            <tr>
-              <td>10/4</td>
-              <td>Publix</td>
-              <td>$389.67</td>
-            </tr>
-            <tr>
-              <td>10/3</td>
-              <td>GameStop</td>
-              <td>$78.13</td>
-            </tr>
-          </tbody>
-        </table>
+        {recentTransactions.length > 0 ? (
+          <table className="transactions-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentTransactions.map((transaction) => {
+                const date = new Date(transaction.date);
+                const formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
+                return (
+                  <tr key={transaction._id || transaction.id}>
+                    <td>{formattedDate}</td>
+                    <td>{transaction.name || 'Transaction'}</td>
+                    <td>${Math.abs(transaction.amount).toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <div className="no-data">
+            <p>No recent transactions</p>
+          </div>
+        )}
       </div>
     </div>
   );

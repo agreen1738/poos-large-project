@@ -5,50 +5,29 @@ import './LoginPage.css';
 function LoginPage() {
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<string[]>([]);
 
   async function doLogin(event: React.FormEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
     
     setIsLoading(true);
-    setMessage('');
-    setDebugInfo([]);
-
-    const logs: string[] = [];
-    logs.push(`✓ Form submitted`);
-    logs.push(`✓ Attempting login with: ${loginName}`);
-    setDebugInfo([...logs]);
+    setError('');
 
     try {
-      logs.push('✓ Calling authService.login...');
-      setDebugInfo([...logs]);
-      
       const user = await authService.login({
         login: loginName,
         password: loginPassword
       });
 
-      logs.push(`✓ Login successful! User: ${user.firstName}`);
-      logs.push(`✓ Redirecting to dashboard...`);
-      setDebugInfo([...logs]);
-
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+      // Login successful - redirect to dashboard
+      window.location.href = '/dashboard';
     } catch (error: any) {
-      logs.push(`✗ ERROR: ${error.message}`);
-      console.error('Full error object:', error);
-      console.error('Error response:', error.response);
-      setDebugInfo([...logs]);
-      setMessage(error.message || 'Login failed. Please try again.');
-    } finally {
+      // Show error message without reloading the page
+      setError(error.message || 'Login failed. Please try again.');
       setIsLoading(false);
     }
-    
-    return;
   }
 
   return (
@@ -62,16 +41,39 @@ function LoginPage() {
             type="text"
             placeholder="Email Address"
             value={loginName}
-            onChange={(e) => setLoginName(e.target.value)}
+            onChange={(e) => {
+              setLoginName(e.target.value);
+              setError(''); // Clear error when user starts typing
+            }}
             required
+            disabled={isLoading}
           />
           <input
             type="password"
             placeholder="Password"
             value={loginPassword}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError(''); // Clear error when user starts typing
+            }}
             required
+            disabled={isLoading}
           />
+          
+          {error && (
+            <div className="error-message" style={{
+              backgroundColor: '#f8d7da',
+              color: '#721c24',
+              padding: '12px',
+              borderRadius: '4px',
+              border: '1px solid #f5c6cb',
+              marginBottom: '15px',
+              fontSize: '14px',
+              textAlign: 'left'
+            }}>
+              {error}
+            </div>
+          )}
           
           <div className="form-footer">
             <a href="/forgot-password" className="forgot-password-link">Forgot Password?</a>
@@ -81,20 +83,6 @@ function LoginPage() {
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        {message && <div className="error-message">{message}</div>}
-
-        {/* Debug Info */}
-        {debugInfo.length > 0 && (
-          <div className="debug-info">
-            <strong>Debug Info:</strong>
-            {debugInfo.map((log, index) => (
-              <div key={index} style={{ fontSize: '11px', padding: '2px 0' }}>
-                {log}
-              </div>
-            ))}
-          </div>
-        )}
 
         <div className="register-link">
           <p>Don't have an account? <a href="/register">Create one here</a></p>
