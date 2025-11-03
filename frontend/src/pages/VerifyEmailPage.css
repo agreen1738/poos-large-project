@@ -1,0 +1,140 @@
+.verify-email-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.verify-email-container {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px black;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.email-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.verify-email-container h1 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #666;
+  margin-bottom: 30px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.subtitle strong {
+  color: #667eea;
+}
+
+.verify-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.code-input {
+  padding: 15px;
+  border: 2px solid #ddd;
+  border-radius: 5px;
+  font-size: 24px;
+  text-align: center;
+  letter-spacing: 8px;
+  font-weight: 600;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+}
+
+.verify-email-form button {
+  padding: 12px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.verify-email-form button:hover:not(:disabled) {
+  background: #764ba2;
+}
+
+.verify-email-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.message {
+  padding: 12px;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-top: 15px;
+}
+
+.message.success {
+  background: #d1f2eb;
+  color: #0a3622;
+  border: 1px solid #0a3622;
+}
+
+.message.error {
+  background: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+}
+
+.resend-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.resend-btn:hover {
+  color: #764ba2;
+}
+
+.resend-timer {
+  color: #999;
+  font-size: 14px;
+}
+
+.back-to-login {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.back-to-login a {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.back-to-login a:hover {
+  text-decoration: underline;
+}

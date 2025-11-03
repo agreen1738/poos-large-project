@@ -11,8 +11,7 @@ async function getTransactions(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const transactions = await collection.find({ userId }, { projection: { userId: 0 } }).toArray();
 
-        if (transactions.length === 0) return badRequest(res, Messages.TRANSACTIONS + Messages.FAILED);
-
+        // FIXED: Return empty array instead of error when no transactions exist
         return res.status(200).json(transactions);
     } catch (error) {
         internalServerError(res, error);
@@ -38,8 +37,7 @@ async function getAccountTransactions(req: Request, res: Response) {
             .find({ userId, accountId: accountObjectId }, { projection: { userId: 0 } })
             .toArray();
 
-        if (transactions.length === 0) return badRequest(res, Messages.TRANSACTION + Messages.FAILED);
-
+        // FIXED: Return empty array instead of error when no transactions exist
         return res.status(200).json(transactions);
     } catch (error) {
         internalServerError(res, error);
@@ -96,20 +94,7 @@ async function deleteTransaction(req: Request, res: Response) {
         const transactionId = new ObjectId(id);
         const accountObjectId = new ObjectId(accountId);
 
-        const account = await accountsCollection.findOne(
-            { _id: accountObjectId, userId: userId },
-            {
-                projection: {
-                    userId: 0,
-                    accountName: 0,
-                    accountType: 0,
-                    accountNumber: 0,
-                    accountInstitution: 0,
-                    createdAt: 0,
-                    isActive: 0,
-                },
-            }
-        );
+        const account = await accountsCollection.findOne({ _id: accountObjectId, userId: userId });
 
         if (!account) return notFound(res, Messages.ACCOUNT + Messages.FAILED);
 
@@ -121,8 +106,18 @@ async function deleteTransaction(req: Request, res: Response) {
 
         if (!transaction) return notFound(res, Messages.TRANSACTION + Messages.FAILED);
 
-        const balance = account.balance + transaction.amount;
-        const update = await accountsCollection.updateOne({ _id: accountObjectId }, { $set: { balance: balance } });
+        // FIXED: Restore balance by subtracting the transaction amount (since amount is already negative)
+        // If amount is -100, subtracting it adds 100 back to the balance
+        const newBalance = account.balanace - transaction.amount;
+        const update = await accountsCollection.updateOne(
+            { _id: accountObjectId },
+            {
+                $set: {
+                    balanace: newBalance,
+                    updatedAt: new Date(),
+                },
+            }
+        );
 
         if (!update.acknowledged) return badRequest(res, Messages.FAILED);
 
@@ -145,14 +140,14 @@ async function addTransaction(req: Request, res: Response) {
         const bodyLength = Object.keys(req.body).length;
         const paramsLength = Object.keys(req.params).length;
 
-        if (paramsLength !== 1 || bodyLength !== 3) {
+        if (paramsLength !== 1 || bodyLength !== 5) {
             return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
         }
 
         const { accountId } = req.params;
-        const { amount, category, type } = req.body;
+        const { name, amount, category, type, date } = req.body;
 
-        if (!accountId || !amount || !category || !type) {
+        if (!accountId || amount === undefined || !category || !type || !date) {
             return badRequest(res, Messages.MISSING_FIELDS);
         }
 
@@ -162,37 +157,47 @@ async function addTransaction(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const accountObjectId = new ObjectId(accountId);
 
-        const account = await accountsCollection.findOne(
-            { _id: accountObjectId, userId: userId },
+        const account = await accountsCollection.findOne({ _id: accountObjectId, userId: userId });
+
+        if (!account) return notFound(res, Messages.ACCOUNT + Messages.FAILED);
+
+        // ADDED: Update account balance when creating transaction
+        // Amount should be negative for expenses (from frontend)
+        const newBalance = account.balanace + amount;
+
+        const balanceUpdate = await accountsCollection.updateOne(
+            { _id: accountObjectId },
             {
-                projection: {
-                    userId: 0,
-                    accountName: 0,
-                    accountType: 0,
-                    accountNumber: 0,
-                    accountInstitution: 0,
-                    createdAt: 0,
-                    isActive: 0,
+                $set: {
+                    balanace: newBalance,
+                    updatedAt: new Date(),
                 },
             }
         );
 
-        if (!account) return notFound(res, Messages.ACCOUNT + Messages.FAILED);
+        if (!balanceUpdate.acknowledged) {
+            return badRequest(res, Messages.FAILED + ' to update account balance');
+        }
 
         const newTransaction: Transactions = {
             userId: userId,
             accountId: new ObjectId(accountId),
+            name: name,
             amount: amount,
             category: category,
             type: type,
-            date: new Date(),
+            date: new Date(date),
         };
 
         const transaction = await transactionsCollection.insertOne(newTransaction);
 
-        if (!transaction.acknowledged) return badRequest(res, Messages.TRANSACTION + Messages.FAILED);
+        if (!transaction.acknowledged) {
+            // Rollback balance update if transaction creation fails
+            await accountsCollection.updateOne({ _id: accountObjectId }, { $set: { balanace: account.balanace } });
+            return badRequest(res, Messages.TRANSACTION + Messages.FAILED);
+        }
 
-        created(res, Messages.TRANSACTION + Messages.CREATED);
+        return created(res, Messages.TRANSACTION + Messages.CREATED);
     } catch (error) {
         internalServerError(res, error);
     }

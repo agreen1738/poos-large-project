@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import authService from '../services/authService';
 import './RegisterPage.css';
 
 interface FormErrors {
@@ -8,6 +9,11 @@ interface FormErrors {
   phone?: string;
   password?: string;
   confirmPassword?: string;
+}
+
+interface Notification {
+  type: 'success' | 'error' | 'info';
+  message: string;
 }
 
 function RegisterPage() {
@@ -22,6 +28,21 @@ function RegisterPage() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+  };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -46,8 +67,6 @@ function RegisterPage() {
     // Phone validation
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number';
     }
 
     // Password validation
@@ -93,26 +112,29 @@ function RegisterPage() {
 
     setIsLoading(true);
 
+    // Send all 6 required fields to match backend
+    const registerData = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword
+    };
+
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/api/register`, {
-        method: 'POST',
-        body: JSON.stringify(formData),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-
-      if (res.error) {
-        alert('Registration failed: ' + res.error);
-      } else {
-        alert('Registration successful! Please login.');
+      // Use authService to register
+      await authService.register(registerData);
+      
+      showNotification('success', 'Registration successful! Please check your email to verify your account before logging in.');
+      
+      // Redirect to login after showing success message
+      setTimeout(() => {
         window.location.href = '/';
-      }
-    } catch (error) {
-      console.log('Backend not responding, using temporary test registration');
-      alert('Registration will work when backend is ready! Redirecting to login...');
-      window.location.href = '/';
+      }, 3000);
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      showNotification('error', error.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -120,6 +142,71 @@ function RegisterPage() {
 
   return (
     <div className="register-page">
+      {/* Notification Toast */}
+      {notification && (
+        <div 
+          className={`notification-toast notification-${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 9999,
+            minWidth: '300px',
+            maxWidth: '500px',
+            animation: 'slideIn 0.3s ease-out',
+            backgroundColor: notification.type === 'success' ? '#d4edda' : 
+                           notification.type === 'error' ? '#f8d7da' : '#d1ecf1',
+            color: notification.type === 'success' ? '#155724' : 
+                   notification.type === 'error' ? '#721c24' : '#0c5460',
+            border: `1px solid ${notification.type === 'success' ? '#c3e6cb' : 
+                                 notification.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notification.type === 'success' && <span>✓</span>}
+            {notification.type === 'error' && <span>✗</span>}
+            {notification.type === 'info' && <span>ℹ</span>}
+            {notification.message}
+          </span>
+          <button 
+            onClick={() => setNotification(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: '0 0 0 16px',
+              opacity: 0.7
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Add CSS animation */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
       <div className="register-container">
         <h1>Wealth Tracker</h1>
         <p className="subtitle">Create Your Account</p>
@@ -134,6 +221,7 @@ function RegisterPage() {
               value={formData.firstName}
               onChange={handleInputChange}
               className={errors.firstName ? 'error shake' : ''}
+              disabled={isLoading}
             />
             {errors.firstName && (
               <span className="error-message">{errors.firstName}</span>
@@ -149,6 +237,7 @@ function RegisterPage() {
               value={formData.lastName}
               onChange={handleInputChange}
               className={errors.lastName ? 'error shake' : ''}
+              disabled={isLoading}
             />
             {errors.lastName && (
               <span className="error-message">{errors.lastName}</span>
@@ -164,6 +253,7 @@ function RegisterPage() {
               value={formData.email}
               onChange={handleInputChange}
               className={errors.email ? 'error shake' : ''}
+              disabled={isLoading}
             />
             {errors.email && (
               <span className="error-message">{errors.email}</span>
@@ -179,6 +269,7 @@ function RegisterPage() {
               value={formData.phone}
               onChange={handleInputChange}
               className={errors.phone ? 'error shake' : ''}
+              disabled={isLoading}
             />
             {errors.phone && (
               <span className="error-message">{errors.phone}</span>
@@ -194,6 +285,7 @@ function RegisterPage() {
               value={formData.password}
               onChange={handleInputChange}
               className={errors.password ? 'error shake' : ''}
+              disabled={isLoading}
             />
             {errors.password && (
               <span className="error-message">{errors.password}</span>
@@ -209,6 +301,7 @@ function RegisterPage() {
               value={formData.confirmPassword}
               onChange={handleInputChange}
               className={errors.confirmPassword ? 'error shake' : ''}
+              disabled={isLoading}
             />
             {errors.confirmPassword && (
               <span className="error-message">{errors.confirmPassword}</span>

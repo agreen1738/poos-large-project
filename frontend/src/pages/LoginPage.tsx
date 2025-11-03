@@ -1,59 +1,31 @@
 import { useState } from 'react';
+import authService from '../services/authService';
 import './LoginPage.css';
 
 function LoginPage() {
   const [loginName, setLoginName] = useState('');
   const [loginPassword, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  async function doLogin(event: any): Promise<void> {
+  async function doLogin(event: React.FormEvent): Promise<void> {
     event.preventDefault();
+    event.stopPropagation();
+    
     setIsLoading(true);
-    setMessage('');
-
-    const obj = { login: loginName, password: loginPassword };
-    const js = JSON.stringify(obj);
+    setError('');
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL;
-      const response = await fetch(`${API_URL}/api/login`, {
-        method: 'POST',
-        body: js,
-        headers: { 'Content-Type': 'application/json' }
+      const user = await authService.login({
+        login: loginName,
+        password: loginPassword
       });
 
-      const res = await response.json();
-
-      if (res.id <= 0 || res.error) {
-        setMessage('User/Password combination incorrect');
-      } else {
-        const user = {
-          firstName: res.firstName,
-          lastName: res.lastName,
-          id: res.id
-        };
-        localStorage.setItem('user_data', JSON.stringify(user));
-        setMessage('');
-        window.location.href = '/dashboard';
-      }
+      // Login successful - redirect to dashboard
+      window.location.href = '/dashboard';
     } catch (error: any) {
-      // TEMPORARY TEST LOGIN - Remove this after backend is connected
-      console.log('Backend not responding, using temporary test login');
-      
-      if (loginName && loginPassword) {
-        const user = {
-          firstName: 'Test',
-          lastName: 'User',
-          id: 1
-        };
-        localStorage.setItem('user_data', JSON.stringify(user));
-        setMessage('');
-        window.location.href = '/dashboard';
-      } else {
-        setMessage('Please enter username and password');
-      }
-    } finally {
+      // Show error message without reloading the page
+      setError(error.message || 'Login failed. Please try again.');
       setIsLoading(false);
     }
   }
@@ -67,31 +39,50 @@ function LoginPage() {
         <form className="login-form" onSubmit={doLogin}>
           <input
             type="text"
-            placeholder="Username"
+            placeholder="Email Address"
             value={loginName}
-            onChange={(e) => setLoginName(e.target.value)}
+            onChange={(e) => {
+              setLoginName(e.target.value);
+              setError(''); // Clear error when user starts typing
+            }}
             required
+            disabled={isLoading}
           />
           <input
             type="password"
             placeholder="Password"
             value={loginPassword}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setError(''); // Clear error when user starts typing
+            }}
             required
+            disabled={isLoading}
           />
+          
+          {error && (
+            <div className="error-message" style={{
+              backgroundColor: '#f8d7da',
+              color: '#721c24',
+              padding: '12px',
+              borderRadius: '4px',
+              border: '1px solid #f5c6cb',
+              marginBottom: '15px',
+              fontSize: '14px',
+              textAlign: 'left'
+            }}>
+              {error}
+            </div>
+          )}
+          
+          <div className="form-footer">
+            <a href="/forgot-password" className="forgot-password-link">Forgot Password?</a>
+          </div>
+          
           <button type="submit" disabled={isLoading}>
             {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
-
-        {message && <div className="error-message">{message}</div>}
-        
-        {/* TEMPORARY - Remove this after backend is connected */}
-        <div className="temp-test-notice">
-          <p style={{ fontSize: '12px', color: '#999', marginTop: '15px', textAlign: 'center' }}>
-            ⚠️ Temporary Test Mode: Enter any username/password ⚠️
-          </p>
-        </div>
 
         <div className="register-link">
           <p>Don't have an account? <a href="/register">Create one here</a></p>

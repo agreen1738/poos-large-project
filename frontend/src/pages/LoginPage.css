@@ -47,6 +47,23 @@
   box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
 }
 
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -5px;
+}
+
+.forgot-password-link {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
 .login-form button {
   padding: 12px;
   background: #667eea;
@@ -74,4 +91,71 @@
   border-radius: 5px;
   font-size: 14px;
   margin-top: 10px;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.register-link p {
+  color: #666;
+  font-size: 14px;
+}
+
+.register-link a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
+}
+
+.test-login-section {
+  text-align: center;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.test-login-btn {
+  padding: 10px 20px;
+  background: #f0f0f0;
+  color: #667eea;
+  border: 2px dashed #667eea;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.test-login-btn:hover {
+  background: #667eea;
+  color: white;
+  border-style: solid;
+}
+
+.debug-info {
+  margin-top: 15px;
+  padding: 12px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #333;
+  text-align: left;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 30px 20px;
+  }
 }

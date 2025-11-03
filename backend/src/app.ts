@@ -4,7 +4,8 @@ import authRoutes from './routes/authRoutes.js';
 import accountRoutes from './routes/accountRoutes.js';
 import transactionRoutes from './routes/transactionsRoutes.js';
 import userRoutes from './routes/userRoutes.js';
-import budgetRoutes from './routes/budgetRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+// import budgetRoutes from './routes/budgetRoutes.js';
 import authenticateToken from './middleware/authMiddleware.js';
 import type { Response, Request, NextFunction } from 'express';
 
@@ -28,6 +29,7 @@ app.use('/api', authRoutes);
 app.use('/api', authenticateToken, accountRoutes);
 app.use('/api', authenticateToken, transactionRoutes);
 app.use('/api', authenticateToken, userRoutes);
-app.use('/api', authenticateToken, budgetRoutes);
+app.use('/api', authenticateToken, analyticsRoutes);
+// app.use('/api', authenticateToken, budgetRoutes);
 
 export default app;

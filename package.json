@@ -17,5 +17,11 @@
   "bugs": {
     "url": "https://github.com/agreen1738/poos-large-project/issues"
   },
-  "homepage": "https://github.com/agreen1738/poos-large-project#readme"
+  "homepage": "https://github.com/agreen1738/poos-large-project#readme",
+  "dependencies": {
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.3"
+  }
 }

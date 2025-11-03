@@ -1,16 +1,21 @@
 // Analytics.tsx - Analytics page with pie chart
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
+import accountService from '../services/accountService';
+import analyticsService from '../services/analyticsService';
+import type { Account } from '../services/accountService';
+import type { CategoryData } from '../services/analyticsService';
 import './Analytics.css';
 
 function Analytics() {
   const [selectedAccount, setSelectedAccount] = useState('all');
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Colors for each category
-  const COLORS = {
+  const COLORS: { [key: string]: string } = {
     'Savings': '#FFD700',
     'Living': '#4A90E2',
     'Hobbies': '#FF8C42',
@@ -19,69 +24,32 @@ function Analytics() {
 
   useEffect(() => {
     fetchAccounts();
-    fetchCategoryData(selectedAccount);
+  }, []);
+
+  useEffect(() => {
+    fetchCategoryData();
   }, [selectedAccount]);
 
   async function fetchAccounts() {
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const user = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/accounts`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: user.id }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setAccounts(res.accounts || []);
-      }
-    } catch (error) {
-      console.log('Using sample accounts for testing');
-      // Sample data for testing
-      setAccounts([
-        { id: 1, name: 'Chase Checking', type: 'Checking' },
-        { id: 2, name: 'Savings Account', type: 'Savings' },
-        { id: 3, name: 'Credit Card', type: 'Credit' }
-      ]);
+      const data = await accountService.getAccounts();
+      setAccounts(data);
+    } catch (error: any) {
+      console.error('Error fetching accounts:', error);
+      setError(error.message || 'Failed to load accounts');
     }
   }
 
-  async function fetchCategoryData(accountId: string) {
+  async function fetchCategoryData() {
     setLoading(true);
+    setError(null);
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const user = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/analytics/categories`, {
-        method: 'POST',
-        body: JSON.stringify({ 
-          userId: user.id,
-          accountId: accountId === 'all' ? null : accountId
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setCategoryData(res.categories || []);
-      }
-    } catch (error) {
-      console.log('Using sample data for testing');
-      // Sample data for testing
-      setCategoryData([
-        { name: 'Savings', value: 1200, percentage: 40 },
-        { name: 'Living', value: 1500, percentage: 50 },
-        { name: 'Hobbies', value: 200, percentage: 7 },
-        { name: 'Gambling', value: 100, percentage: 3 }
-      ]);
+      const data = await analyticsService.getCategoryAnalytics(selectedAccount);
+      setCategoryData(data.categories || []);
+    } catch (error: any) {
+      console.error('Error fetching category data:', error);
+      setError(error.message || 'Failed to load analytics');
+      setCategoryData([]);
     } finally {
       setLoading(false);
     }
@@ -101,17 +69,28 @@ function Analytics() {
             onChange={(e) => setSelectedAccount(e.target.value)}
           >
             <option value="all">All Accounts</option>
-            {accounts.map((account: any) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
+            {accounts.map((account) => (
+              <option key={account._id} value={account._id}>
+                {account.accountName}
               </option>
             ))}
           </select>
         </div>
       </div>
 
+      {error && (
+        <div className="error-state">
+          <p>⚠️ {error}</p>
+        </div>
+      )}
+
       {loading ? (
         <div className="loading-state">Loading analytics...</div>
+      ) : categoryData.length === 0 || totalSpending === 0 ? (
+        <div className="no-data-state">
+          <p>No spending data available for the selected account.</p>
+          <p>Start adding transactions to see your spending breakdown!</p>
+        </div>
       ) : (
         <div className="analytics-content">
           <div className="chart-section">
@@ -128,8 +107,8 @@ function Analytics() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {categoryData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
@@ -146,13 +125,15 @@ function Analytics() {
             </div>
             
             <div className="category-list">
-              {categoryData.map((category: any) => (
+              {categoryData
+                .filter(category => category.value > 0)
+                .map((category) => (
                 <div key={category.name} className="category-item">
                   <div className="category-header">
                     <div className="category-name">
                       <span 
                         className="category-color" 
-                        style={{ backgroundColor: COLORS[category.name as keyof typeof COLORS] }}
+                        style={{ backgroundColor: COLORS[category.name] }}
                       ></span>
                       <span>{category.name}</span>
                     </div>
@@ -163,7 +144,7 @@ function Analytics() {
                       className="category-bar-fill"
                       style={{ 
                         width: `${category.percentage}%`,
-                        backgroundColor: COLORS[category.name as keyof typeof COLORS]
+                        backgroundColor: COLORS[category.name]
                       }}
                     ></div>
                   </div>

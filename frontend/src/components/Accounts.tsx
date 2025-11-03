@@ -1,62 +1,56 @@
 // Accounts.tsx - Accounts page with add account functionality
 import { useState, useEffect } from 'react';
+import accountService from '../services/accountService';
+import type { Account } from '../services/accountService';
 import './Accounts.css';
 
-interface Account {
-  id: number;
-  name: string;
-  type: string;
-  balance: number;
-  accountNumber: string;
-  institution: string;
+interface Notification {
+  type: 'success' | 'error' | 'info';
+  message: string;
 }
 
 function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [notification, setNotification] = useState<Notification | null>(null);
   
-  // Form state
+  // Form state - includes all 5 required fields
   const [formData, setFormData] = useState({
-    name: '',
-    type: 'Checking',
-    balance: '',
+    accountName: '',
+    accountType: 'Checking',
     accountNumber: '',
-    institution: ''
+    accountInstitution: '',
+    balance: '0.00'
   });
 
   useEffect(() => {
     fetchAccounts();
   }, []);
 
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+  };
+
   async function fetchAccounts() {
     setLoading(true);
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const user = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/accounts`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: user.id }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setAccounts(res.accounts || []);
-      }
-    } catch (error) {
-      console.log('Using sample data for testing');
-      // Sample data for testing
-      setAccounts([
-        { id: 1, name: 'Chase Checking', type: 'Checking', balance: 1204.45, accountNumber: '****1234', institution: 'Chase Bank' },
-        { id: 2, name: 'Savings Account', type: 'Savings', balance: 13901.28, accountNumber: '****5678', institution: 'Bank of America' },
-        { id: 3, name: 'Credit Card', type: 'Credit', balance: -67.89, accountNumber: '****9012', institution: 'Capital One' },
-        { id: 4, name: 'Investment Account', type: 'Investment', balance: 25430.50, accountNumber: '****3456', institution: 'Vanguard' },
-      ]);
+      const data = await accountService.getAccounts();
+      setAccounts(data);
+    } catch (error: any) {
+      console.error('Error fetching accounts:', error);
     } finally {
       setLoading(false);
     }
@@ -70,35 +64,138 @@ function Accounts() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Backend integration will go here
-    console.log('Account to be added:', formData);
     
-    // Close modal and reset form
-    setShowModal(false);
-    setFormData({
-      name: '',
-      type: 'Checking',
-      balance: '',
-      accountNumber: '',
-      institution: ''
-    });
-    
-    // Show confirmation
-    alert('Account will be added when backend is ready!');
+    try {
+      // Create account using service with all required fields
+      await accountService.createAccount({
+        accountName: formData.accountName,
+        accountType: formData.accountType,
+        accountNumber: parseInt(formData.accountNumber),
+        accountInstitution: formData.accountInstitution,
+        balance: parseFloat(formData.balance)
+      });
+      
+      // Refresh accounts list
+      await fetchAccounts();
+      
+      // Close modal and reset form
+      setShowModal(false);
+      setFormData({
+        accountName: '',
+        accountType: 'Checking',
+        accountNumber: '',
+        accountInstitution: '',
+        balance: '0.00'
+      });
+
+      showNotification('success', 'Account added successfully!');
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to add account');
+    }
+  };
+
+  const handleDeleteClick = (accountId: string, accountName: string) => {
+    setAccountToDelete({ id: accountId, name: accountName });
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!accountToDelete) return;
+
+    try {
+      await accountService.deleteAccount(accountToDelete.id);
+      
+      // Refresh accounts list
+      await fetchAccounts();
+      
+      // Close modal and reset
+      setShowDeleteModal(false);
+      setAccountToDelete(null);
+
+      showNotification('success', 'Account deleted successfully!');
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to delete account');
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setAccountToDelete(null);
   };
 
   const getTotalBalance = () => {
-    return accounts.reduce((sum, account) => sum + account.balance, 0);
-  };
-
-  const getAccountsByType = (type: string) => {
-    return accounts.filter(account => account.type === type);
+    return accounts.reduce((sum, account) => sum + (account.balanace || 0), 0);
   };
 
   return (
     <>
+      {/* Notification Toast */}
+      {notification && (
+        <div 
+          className={`notification-toast notification-${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 9999,
+            minWidth: '300px',
+            maxWidth: '500px',
+            animation: 'slideIn 0.3s ease-out',
+            backgroundColor: notification.type === 'success' ? '#d4edda' : 
+                           notification.type === 'error' ? '#f8d7da' : '#d1ecf1',
+            color: notification.type === 'success' ? '#155724' : 
+                   notification.type === 'error' ? '#721c24' : '#0c5460',
+            border: `1px solid ${notification.type === 'success' ? '#c3e6cb' : 
+                                 notification.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notification.type === 'success' && <span>✓</span>}
+            {notification.type === 'error' && <span>✗</span>}
+            {notification.type === 'info' && <span>ℹ</span>}
+            {notification.message}
+          </span>
+          <button 
+            onClick={() => setNotification(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: '0 0 0 16px',
+              opacity: 0.7
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Add CSS animation */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
       <div className="accounts-page">
         {/* Summary Section */}
         <div className="accounts-summary">
@@ -112,7 +209,7 @@ function Accounts() {
           </div>
           <div className="summary-card">
             <h3>Account Types</h3>
-            <p className="account-types">{new Set(accounts.map(a => a.type)).size}</p>
+            <p className="account-types">{new Set(accounts.map(a => a.accountType)).size}</p>
           </div>
         </div>
 
@@ -131,26 +228,41 @@ function Accounts() {
             <div className="accounts-grid">
               {accounts.length > 0 ? (
                 accounts.map((account) => (
-                  <div key={account.id} className="account-card">
+                  <div key={account._id} className="account-card">
                     <div className="account-card-header">
-                      <div className="account-type-badge" data-type={account.type.toLowerCase()}>
-                        {account.type}
+                      <div className="account-type-badge" data-type={account.accountType.toLowerCase()}>
+                        {account.accountType}
                       </div>
-                      <h4>{account.name}</h4>
+                      <h4>{account.accountName}</h4>
+                      <button 
+                        className="account-delete-btn"
+                        onClick={() => handleDeleteClick(account._id, account.accountName)}
+                        title="Delete account"
+                      >
+                        Delete
+                      </button>
                     </div>
                     <div className="account-card-body">
                       <div className="account-info">
-                        <span className="info-label">Institution</span>
-                        <span className="info-value">{account.institution}</span>
+                        <span className="info-label">Account Number</span>
+                        <span className="info-value">****{account.accountNumber.toString().slice(-4)}</span>
                       </div>
                       <div className="account-info">
-                        <span className="info-label">Account Number</span>
-                        <span className="info-value">{account.accountNumber}</span>
+                        <span className="info-label">Institution</span>
+                        <span className="info-value">{account.accountInstitution}</span>
+                      </div>
+                      <div className="account-info">
+                        <span className="info-label">Currency</span>
+                        <span className="info-value">{account.currency}</span>
+                      </div>
+                      <div className="account-info">
+                        <span className="info-label">Status</span>
+                        <span className="info-value">{account.isActive ? 'Active' : 'Inactive'}</span>
                       </div>
                       <div className="account-balance">
                         <span className="balance-label">Balance</span>
-                        <span className={`balance-value ${account.balance < 0 ? 'negative' : 'positive'}`}>
-                          ${Math.abs(account.balance).toFixed(2)}
+                        <span className={`balance-value ${(account.balanace || 0) < 0 ? 'negative' : 'positive'}`}>
+                          ${Math.abs(account.balanace || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -177,12 +289,12 @@ function Accounts() {
             
             <form onSubmit={handleSubmit} className="account-form">
               <div className="form-group">
-                <label htmlFor="name">Account Name</label>
+                <label htmlFor="accountName">Account Name</label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
+                  id="accountName"
+                  name="accountName"
+                  value={formData.accountName}
                   onChange={handleInputChange}
                   placeholder="e.g., My Checking Account"
                   required
@@ -190,11 +302,11 @@ function Accounts() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="type">Account Type</label>
+                <label htmlFor="accountType">Account Type</label>
                 <select
-                  id="type"
-                  name="type"
-                  value={formData.type}
+                  id="accountType"
+                  name="accountType"
+                  value={formData.accountType}
                   onChange={handleInputChange}
                   required
                 >
@@ -207,34 +319,33 @@ function Accounts() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="institution">Financial Institution</label>
+                <label htmlFor="accountNumber">Account Number</label>
                 <input
-                  type="text"
-                  id="institution"
-                  name="institution"
-                  value={formData.institution}
-                  onChange={handleInputChange}
-                  placeholder="e.g., Chase Bank"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="accountNumber">Account Number (Last 4 digits)</label>
-                <input
-                  type="text"
+                  type="number"
                   id="accountNumber"
                   name="accountNumber"
                   value={formData.accountNumber}
                   onChange={handleInputChange}
-                  placeholder="1234"
-                  maxLength={4}
+                  placeholder="e.g., 1234567890"
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="balance">Current Balance</label>
+                <label htmlFor="accountInstitution">Financial Institution</label>
+                <input
+                  type="text"
+                  id="accountInstitution"
+                  name="accountInstitution"
+                  value={formData.accountInstitution}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Chase Bank, Wells Fargo"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="balance">Initial Balance</label>
                 <input
                   type="number"
                   id="balance"
@@ -256,6 +367,32 @@ function Accounts() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && accountToDelete && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Delete Account</h2>
+              <button className="modal-close-btn" onClick={handleCancelDelete}>×</button>
+            </div>
+            
+            <div className="delete-modal-body">
+              <p>Are you sure you want to delete the account <strong>"{accountToDelete.name}"</strong>?</p>
+              <p className="warning-text">This action cannot be undone.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button onClick={handleCancelDelete} className="cancel-btn">
+                No, Cancel
+              </button>
+              <button onClick={handleConfirmDelete} className="delete-confirm-btn">
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

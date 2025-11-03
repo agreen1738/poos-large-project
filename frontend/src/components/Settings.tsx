@@ -1,29 +1,29 @@
 // Settings.tsx - Settings page component
 import { useState, useEffect } from 'react';
+import userService from '../services/userService';
+import authService from '../services/authService';
 import './Settings.css';
+
+interface Notification {
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
 
 function Settings() {
   const [user, setUser] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState<Notification | null>(null);
   const [settingsData, setSettingsData] = useState({
     firstName: '',
     lastName: '',
     email: '',
+    phone: '',
     currentPassword: '',
     newPassword: '',
-    confirmPassword: '',
-    notifications: {
-      email: true,
-      push: false,
-      transactionAlerts: true,
-      budgetAlerts: true
-    },
-    preferences: {
-      currency: 'USD',
-      dateFormat: 'MM/DD/YYYY',
-      theme: 'light'
-    }
+    confirmPassword: ''
   });
 
   useEffect(() => {
@@ -35,12 +35,27 @@ function Settings() {
         ...prev,
         firstName: parsedUser.firstName || '',
         lastName: parsedUser.lastName || '',
-        email: parsedUser.email || ''
+        email: parsedUser.email || '',
+        phone: parsedUser.phone || ''
       }));
     }
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setSettingsData(prev => ({
       ...prev,
@@ -48,98 +63,174 @@ function Settings() {
     }));
   };
 
-  const handleNotificationChange = (key: string) => {
-    setSettingsData(prev => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [key]: !prev.notifications[key as keyof typeof prev.notifications]
-      }
-    }));
-  };
-
-  const handlePreferenceChange = (key: string, value: string) => {
-    setSettingsData(prev => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        [key]: value
-      }
-    }));
-  };
-
-  const handleProfileUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Backend integration
-    console.log('Profile update:', {
-      firstName: settingsData.firstName,
-      lastName: settingsData.lastName,
-      email: settingsData.email
-    });
-    alert('Profile will be updated when backend is ready!');
-  };
-
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (settingsData.newPassword !== settingsData.confirmPassword) {
-      alert('New passwords do not match!');
+    try {
+      await userService.updateUserInfo({
+        firstName: settingsData.firstName,
+        lastName: settingsData.lastName,
+        email: settingsData.email,
+        phone: settingsData.phone
+      });
+      
+      // Update local storage
+      const updatedUser = {
+        ...user,
+        firstName: settingsData.firstName,
+        lastName: settingsData.lastName,
+        email: settingsData.email,
+        phone: settingsData.phone
+      };
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      showNotification('success', 'Profile updated successfully!');
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to update profile');
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!settingsData.currentPassword) {
+      showNotification('error', 'Please enter your current password');
       return;
     }
 
-    // TODO: Backend integration
-    console.log('Password change requested');
-    alert('Password will be changed when backend is ready!');
-    
-    // Clear password fields
-    setSettingsData(prev => ({
-      ...prev,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    }));
-  };
+    if (!settingsData.newPassword) {
+      showNotification('error', 'Please enter a new password');
+      return;
+    }
 
-  const handleNotificationSave = () => {
-    // TODO: Backend integration
-    console.log('Notifications saved:', settingsData.notifications);
-    alert('Notification preferences will be saved when backend is ready!');
-  };
+    if (settingsData.newPassword !== settingsData.confirmPassword) {
+      showNotification('error', 'New passwords do not match!');
+      return;
+    }
 
-  const handlePreferencesSave = () => {
-    // TODO: Backend integration
-    console.log('Preferences saved:', settingsData.preferences);
-    alert('Preferences will be saved when backend is ready!');
+    if (settingsData.newPassword.length < 6) {
+      showNotification('error', 'Password must be at least 6 characters long!');
+      return;
+    }
+
+    try {
+      await userService.changePassword({
+        currentPassword: settingsData.currentPassword,
+        newPassword: settingsData.newPassword
+      });
+      
+      // Clear password fields
+      setSettingsData(prev => ({
+        ...prev,
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }));
+      
+      showNotification('success', 'Password changed successfully!');
+    } catch (error: any) {
+      showNotification('error', error.message || 'Failed to change password');
+    }
   };
 
   const handleDeleteAccount = () => {
     setShowDeleteModal(true);
+    setDeleteError('');
+    setDeletePassword('');
   };
 
-  const handleDeleteConfirm = (e: React.FormEvent) => {
+  const handleDeleteConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!deletePassword) {
-      alert('Please enter your password to confirm deletion.');
+      setDeleteError('Please enter your password to confirm deletion.');
       return;
     }
 
-    // TODO: Backend integration - verify password and delete account
-    console.log('Account deletion confirmed with password');
-    alert('Account deletion will be implemented when backend is ready!');
-    
-    // Close modal and clear password
-    setShowDeleteModal(false);
-    setDeletePassword('');
+    setIsDeleting(true);
+    setDeleteError('');
+
+    try {
+      await userService.deleteAccount(deletePassword);
+      
+      // Show success message before redirecting
+      showNotification('success', 'Account deleted successfully. Redirecting to login...');
+      
+      // Delay logout to show the message
+      setTimeout(() => {
+        authService.logout();
+      }, 2000);
+    } catch (error: any) {
+      // If there's an error (like wrong password), show it and stay on the modal
+      const errorMessage = error.message || 'Failed to delete account';
+      setDeleteError(errorMessage);
+      setIsDeleting(false);
+      // Don't close the modal or logout - let the user try again or cancel
+    }
   };
 
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
     setDeletePassword('');
+    setDeleteError('');
+    setIsDeleting(false);
   };
 
   return (
     <div className="settings-container">
+      {/* Notification Toast */}
+      {notification && (
+        <div 
+          className={`notification-toast notification-${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 9999,
+            minWidth: '300px',
+            maxWidth: '500px',
+            animation: 'slideIn 0.3s ease-out',
+            backgroundColor: notification.type === 'success' ? '#d4edda' : 
+                           notification.type === 'error' ? '#f8d7da' : '#d1ecf1',
+            color: notification.type === 'success' ? '#155724' : 
+                   notification.type === 'error' ? '#721c24' : '#0c5460',
+            border: `1px solid ${notification.type === 'success' ? '#c3e6cb' : 
+                                 notification.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notification.type === 'success' && <span>✓</span>}
+            {notification.type === 'error' && <span>✗</span>}
+            {notification.type === 'info' && <span>ℹ</span>}
+            {notification.message}
+          </span>
+          <button 
+            onClick={() => setNotification(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: '0 0 0 16px',
+              opacity: 0.7
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <h2 className="settings-title">Settings</h2>
 
       {/* Profile Settings */}
@@ -179,6 +270,17 @@ function Settings() {
               value={settingsData.email}
               onChange={handleInputChange}
               placeholder="Enter email address"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="phone">Phone Number</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={settingsData.phone}
+              onChange={handleInputChange}
+              placeholder="Enter phone number"
             />
           </div>
           <button type="submit" className="save-btn">Save Profile</button>
@@ -228,127 +330,6 @@ function Settings() {
         </form>
       </div>
 
-      {/* Notification Settings */}
-      <div className="settings-section">
-        <h3 className="section-title">Notifications</h3>
-        <div className="settings-form">
-          <div className="toggle-group">
-            <div className="toggle-item">
-              <div className="toggle-info">
-                <span className="toggle-label">Email Notifications</span>
-                <span className="toggle-description">Receive notifications via email</span>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={settingsData.notifications.email}
-                  onChange={() => handleNotificationChange('email')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="toggle-item">
-              <div className="toggle-info">
-                <span className="toggle-label">Push Notifications</span>
-                <span className="toggle-description">Receive push notifications</span>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={settingsData.notifications.push}
-                  onChange={() => handleNotificationChange('push')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="toggle-item">
-              <div className="toggle-info">
-                <span className="toggle-label">Transaction Alerts</span>
-                <span className="toggle-description">Get notified of new transactions</span>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={settingsData.notifications.transactionAlerts}
-                  onChange={() => handleNotificationChange('transactionAlerts')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-
-            <div className="toggle-item">
-              <div className="toggle-info">
-                <span className="toggle-label">Budget Alerts</span>
-                <span className="toggle-description">Receive budget threshold alerts</span>
-              </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={settingsData.notifications.budgetAlerts}
-                  onChange={() => handleNotificationChange('budgetAlerts')}
-                />
-                <span className="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
-          <button type="button" onClick={handleNotificationSave} className="save-btn">
-            Save Notifications
-          </button>
-        </div>
-      </div>
-
-      {/* Preferences */}
-      <div className="settings-section">
-        <h3 className="section-title">Preferences</h3>
-        <div className="settings-form">
-          <div className="form-group">
-            <label htmlFor="currency">Currency</label>
-            <select
-              id="currency"
-              value={settingsData.preferences.currency}
-              onChange={(e) => handlePreferenceChange('currency', e.target.value)}
-            >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="JPY">JPY (¥)</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="dateFormat">Date Format</label>
-            <select
-              id="dateFormat"
-              value={settingsData.preferences.dateFormat}
-              onChange={(e) => handlePreferenceChange('dateFormat', e.target.value)}
-            >
-              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="theme">Theme</label>
-            <select
-              id="theme"
-              value={settingsData.preferences.theme}
-              onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="auto">Auto</option>
-            </select>
-          </div>
-
-          <button type="button" onClick={handlePreferencesSave} className="save-btn">
-            Save Preferences
-          </button>
-        </div>
-      </div>
-
       {/* Danger Zone */}
       <div className="settings-section danger-zone">
         <h3 className="section-title">Danger Zone</h3>
@@ -390,21 +371,58 @@ function Settings() {
                   placeholder="Enter your password"
                   required
                   autoFocus
+                  disabled={isDeleting}
                 />
+                {deleteError && (
+                  <div className="error-message" style={{ 
+                    color: '#dc3545', 
+                    fontSize: '0.875rem', 
+                    marginTop: '0.5rem',
+                    padding: '0.5rem',
+                    backgroundColor: '#f8d7da',
+                    borderRadius: '4px',
+                    border: '1px solid #f5c6cb'
+                  }}>
+                    {deleteError}
+                  </div>
+                )}
               </div>
 
               <div className="modal-actions">
-                <button type="button" onClick={handleDeleteCancel} className="cancel-btn">
+                <button 
+                  type="button" 
+                  onClick={handleDeleteCancel} 
+                  className="cancel-btn"
+                  disabled={isDeleting}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="delete-confirm-btn">
-                  Delete My Account
+                <button 
+                  type="submit" 
+                  className="delete-confirm-btn"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete My Account'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Add CSS animation for toast */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -23,7 +23,11 @@ const transporter = nodemailer.createTransport({
 
 async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify your account', isResend = false) {
     const verificationToken = jwt.sign({ id: id.toString() }, JWT_SECRET, { expiresIn: '15m' });
-    const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${verificationToken}`;
+    
+    // URL encode the token to prevent special characters from breaking the link
+    const encodedToken = encodeURIComponent(verificationToken);
+    const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${encodedToken}`;
+    
     const emailSubject = isResend ? `Resend: ${subject}` : subject;
     const message = `
         <h4>Hi ${user.firstName},</h4>
@@ -43,11 +47,11 @@ async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify 
 }
 
 async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
-    const passwordResetLink = `${process.env.FRONTEND_URL}/forgot-password?token=${resetToken}`;
+    const passwordResetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     const emailSubject = 'Reset Password';
     const message = `
         <h4>Hi ${user.firstName},</h4>
-        <p>'It looks like you are attempting to reset your password.</p>
+        <p>It looks like you are attempting to reset your password.</p>
         <p>Click the link below to reset your password:</p>
         <a href="${passwordResetLink}">Reset Password</a>
         <p>This link will expire in 15 minutes.</p>
@@ -165,6 +169,9 @@ async function verifyEmail(req: Request, res: Response) {
     } catch (error: any) {
         if (error.name === 'TokenExpiredError') {
             return badRequest(res, Messages.EXPIRED_TOKEN);
+        }
+        if (error.name === 'JsonWebTokenError') {
+            return badRequest(res, 'Invalid token');
         }
         return internalServerError(res, error);
     }

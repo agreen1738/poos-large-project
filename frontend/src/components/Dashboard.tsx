@@ -1,40 +1,36 @@
 // Dashboard.tsx - Main dashboard with sidebar and content layout
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip } from 'recharts';
+import authService from '../services/authService';
+import accountService from '../services/accountService';
+import transactionService from '../services/transactionService';
+import analyticsService from '../services/analyticsService';
 import './Dashboard.css';
 import Transactions from './Transactions';
 import Analytics from './Analytics';
 import Settings from './Settings';
 import Accounts from './Accounts';
 
-interface Transaction {
-  id: number;
-  date: string;
-  name: string;
-  amount: number;
-  category: string;
-}
-
 function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [activePage, setActivePage] = useState('dashboard');
 
   useEffect(() => {
-    const userData = localStorage.getItem('user_data');
+    // Get user data from authService
+    const userData = authService.getCurrentUser();
     if (userData) {
-      setUser(JSON.parse(userData));
+      setUser(userData);
     }
   }, []);
 
   function doLogout() {
-    localStorage.removeItem('user_data');
-    window.location.href = '/';
+    authService.logout();
   }
 
   const renderContent = () => {
     switch (activePage) {
       case 'dashboard':
-        return <DashboardContent user={user} />;
+        return <DashboardContent />;
       case 'transactions':
         return <Transactions />;
       case 'accounts':
@@ -42,9 +38,9 @@ function Dashboard() {
       case 'analytics':
         return <Analytics />;
       case 'settings':
-        return <SettingsContent />;
+        return <Settings />;
       default:
-        return <DashboardContent user={user} />;
+        return <DashboardContent />;
     }
   };
 
@@ -54,7 +50,7 @@ function Dashboard() {
       <aside className="sidebar">
         <div className="sidebar-header">
           <h2>Wealth Tracker</h2>
-          <p>Hello [Name]!!</p>
+          <p>Hello {user?.firstName || 'User'}!</p>
         </div>
 
         <div className="sidebar-icons">
@@ -103,7 +99,7 @@ function Dashboard() {
       {/* Main Content */}
       <main className="main-content">
         <div className="content-header">
-          <h1>Hello [Name]!!</h1>
+          <h1>Hello {user?.firstName || 'User'}!</h1>
           <button className="icon-btn">
             <img src="/images/user.png" alt="Profile" className="icon-img" />
           </button>
@@ -122,11 +118,13 @@ function Dashboard() {
 }
 
 // Dashboard Content Component
-function DashboardContent({ user }: { user: any }) {
+function DashboardContent() {
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Colors for each category
   const COLORS = {
@@ -137,73 +135,57 @@ function DashboardContent({ user }: { user: any }) {
   };
 
   useEffect(() => {
-    fetchCategoryData();
-    fetchTransactions();
+    fetchAllData();
   }, [currentDate]);
+
+  async function fetchAllData() {
+    setLoading(true);
+    try {
+      // Fetch all data in parallel
+      await Promise.all([
+        fetchCategoryData(),
+        fetchTransactions(),
+        fetchAccounts()
+      ]);
+    } catch (error) {
+      console.log('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function fetchCategoryData() {
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const userParsed = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/analytics/categories`, {
-        method: 'POST',
-        body: JSON.stringify({ userId: userParsed.id, accountId: null }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setCategoryData(res.categories || []);
-      }
+      const data = await analyticsService.getCategoryAnalytics('all');
+      setCategoryData(data.categories || []);
     } catch (error) {
-      console.log('Using sample data for dashboard');
-      // Sample data for testing
-      setCategoryData([
-        { name: 'Savings', value: 1200 },
-        { name: 'Living', value: 1500 },
-        { name: 'Hobbies', value: 200 },
-        { name: 'Gambling', value: 100 }
-      ]);
+      console.log('Error loading category data:', error);
+      setCategoryData([]);
     }
   }
 
   async function fetchTransactions() {
     try {
-      const userData = localStorage.getItem('user_data');
-      if (!userData) return;
-
-      const userParsed = JSON.parse(userData);
-      const API_URL = import.meta.env.VITE_API_URL;
-      
-      const response = await fetch(`${API_URL}/api/transactions`, {
-        method: 'POST',
-        body: JSON.stringify({ 
-          userId: userParsed.id,
-          month: currentDate.getMonth() + 1,
-          year: currentDate.getFullYear()
-        }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      const res = await response.json();
-      if (!res.error) {
-        setTransactions(res.transactions || []);
-      }
+      const transactionsData = await transactionService.getTransactions();
+      // Ensure dates are in YYYY-MM-DD format
+      const formattedTransactions = transactionsData.map(t => ({
+        ...t,
+        date: new Date(t.date).toISOString().split('T')[0]
+      }));
+      setTransactions(formattedTransactions);
     } catch (error) {
-      console.log('Using sample data for testing');
-      // Sample data for testing
-      setTransactions([
-        { id: 1, date: '2025-10-04', name: 'Uniqlo', amount: 158.67, category: 'Hobbies' },
-        { id: 2, date: '2025-10-04', name: 'Publix', amount: 389.67, category: 'Living' },
-        { id: 3, date: '2025-10-03', name: 'GameStop', amount: 78.13, category: 'Hobbies' },
-        { id: 4, date: '2025-10-15', name: 'Rent Payment', amount: 1200.00, category: 'Living' },
-        { id: 5, date: '2025-10-20', name: 'Savings Deposit', amount: 500.00, category: 'Savings' },
-        { id: 6, date: '2025-10-12', name: 'Restaurant', amount: 45.32, category: 'Living' },
-      ]);
+      console.log('Error loading transactions:', error);
+      setTransactions([]);
+    }
+  }
+
+  async function fetchAccounts() {
+    try {
+      const accountsData = await accountService.getAccounts();
+      setAccounts(accountsData);
+    } catch (error) {
+      console.log('Error loading accounts:', error);
+      setAccounts([]);
     }
   }
 
@@ -236,66 +218,87 @@ function DashboardContent({ user }: { user: any }) {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 
+  // Get recent transactions (last 5)
+  const recentTransactions = [...transactions]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+
+  // Get total balance from all accounts
+  const getTotalBalance = () => {
+    return accounts.reduce((sum, account) => sum + (account.balanace || 0), 0);
+  };
+
+  if (loading) {
+    return (
+      <div className="dashboard-loading">
+        <p>Loading dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-grid">
       {/* Accounts Section */}
       <div className="dashboard-card accounts-card">
         <h3>ACCOUNTS</h3>
         <div className="accounts-list">
-          <div className="account-item">
-            <span>XXXXXXXX</span>
-            <span className="amount">$1,204.45</span>
-          </div>
-          <div className="account-item">
-            <span>XXXXXXXX</span>
-            <span className="amount">$13,901.28</span>
-          </div>
-          <div className="account-item">
-            <span>XXXXXXXX</span>
-            <span className="amount">$67.89</span>
-          </div>
+          {accounts.length > 0 ? (
+            accounts.slice(0, 3).map((account) => (
+              <div key={account._id} className="account-item">
+                <span>****{account.accountNumber.toString().slice(-4)}</span>
+                <span className="amount">${account.balanace.toFixed(2)}</span>
+              </div>
+            ))
+          ) : (
+            <div className="no-data">No accounts found</div>
+          )}
+          {accounts.length > 3 && (
+            <div className="account-item more-accounts">
+              <span>+{accounts.length - 3} more accounts</span>
+              <span className="amount total-label">Total: ${getTotalBalance().toFixed(2)}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Monthly Breakdown Section */}
       <div className="dashboard-card breakdown-card">
         <h3>MONTHLY BREAKDOWN</h3>
-        <div className="chart-container">
-          <PieChart width={280} height={200}>
-            <Pie
-              data={categoryData}
-              cx="50%"
-              cy="50%"
-              labelLine={false}
-              outerRadius={80}
-              fill="#8884d8"
-              dataKey="value"
-            >
-              {categoryData.map((entry: any, index: number) => (
-                <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+        {categoryData.length > 0 ? (
+          <>
+            <div className="chart-container">
+              <PieChart width={280} height={200}>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+              </PieChart>
+            </div>
+            <div className="chart-legend">
+              {categoryData.map((category) => (
+                <div key={category.name} className="legend-item">
+                  <span className="legend-color" style={{ backgroundColor: COLORS[category.name as keyof typeof COLORS] }}></span>
+                  <span>- {category.name} (${category.value.toFixed(2)})</span>
+                </div>
               ))}
-            </Pie>
-            <Tooltip formatter={(value: number) => `${value.toFixed(2)}`} />
-          </PieChart>
-        </div>
-        <div className="chart-legend">
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#FFD700' }}></span>
-            <span>- Savings</span>
+            </div>
+          </>
+        ) : (
+          <div className="no-data">
+            <p>No spending data available</p>
+            <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>Add transactions to see breakdown</p>
           </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#4A90E2' }}></span>
-            <span>- Living</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#FF8C42' }}></span>
-            <span>- Hobbies</span>
-          </div>
-          <div className="legend-item">
-            <span className="legend-color" style={{ backgroundColor: '#999999' }}></span>
-            <span>- Gambling</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Upcoming Changes Section with Calendar */}
@@ -363,17 +366,25 @@ function DashboardContent({ user }: { user: any }) {
               </div>
               <div className="transactions-sidebar-list">
                 {getTransactionsForDate(selectedDate.getDate()).length > 0 ? (
-                  getTransactionsForDate(selectedDate.getDate()).map((transaction) => (
-                    <div key={transaction.id} className="transaction-item-mini">
-                      <div className="transaction-name">{transaction.name}</div>
-                      <div className="transaction-details">
-                        <span className={`category-tag-mini category-${transaction.category.toLowerCase()}`}>
-                          {transaction.category}
-                        </span>
-                        <span className="transaction-amount-mini">${transaction.amount.toFixed(2)}</span>
+                  getTransactionsForDate(selectedDate.getDate()).map((transaction) => {
+                    const account = accounts.find(a => a._id === transaction.accountId);
+                    return (
+                      <div key={transaction._id || transaction.id} className="transaction-item-mini">
+                        <div className="transaction-name">{transaction.name || 'Transaction'}</div>
+                        <div className="transaction-details">
+                          <span className={`category-tag-mini category-${transaction.category.toLowerCase()}`}>
+                            {transaction.category}
+                          </span>
+                          <span className="transaction-amount-mini">${Math.abs(transaction.amount).toFixed(2)}</span>
+                        </div>
+                        {account && (
+                          <div className="transaction-account">
+                            <small>{account.accountName}</small>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div className="no-transactions-mini">No transactions</div>
                 )}
@@ -386,67 +397,37 @@ function DashboardContent({ user }: { user: any }) {
       {/* Recent Transactions Section */}
       <div className="dashboard-card transactions-card">
         <h3>RECENT TRANSACTIONS</h3>
-        <table className="transactions-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Name</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>10/4</td>
-              <td>Uniqlo</td>
-              <td>$158.67</td>
-            </tr>
-            <tr>
-              <td>10/4</td>
-              <td>Publix</td>
-              <td>$389.67</td>
-            </tr>
-            <tr>
-              <td>10/3</td>
-              <td>GameStop</td>
-              <td>$78.13</td>
-            </tr>
-          </tbody>
-        </table>
+        {recentTransactions.length > 0 ? (
+          <table className="transactions-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentTransactions.map((transaction) => {
+                const date = new Date(transaction.date);
+                const formattedDate = `${date.getMonth() + 1}/${date.getDate()}`;
+                return (
+                  <tr key={transaction._id || transaction.id}>
+                    <td>{formattedDate}</td>
+                    <td>{transaction.name || 'Transaction'}</td>
+                    <td>${Math.abs(transaction.amount).toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <div className="no-data">
+            <p>No recent transactions</p>
+          </div>
+        )}
       </div>
     </div>
   );
-}
-
-// Placeholder Components for Other Pages
-function TransactionsContent() {
-  return (
-    <div className="content-section">
-      <h2>Transactions</h2>
-      <p>Transactions page content coming soon...</p>
-    </div>
-  );
-}
-
-function AccountsContent() {
-  return (
-    <div className="content-section">
-      <h2>Accounts</h2>
-      <p>Accounts page content coming soon...</p>
-    </div>
-  );
-}
-
-function AnalyticsContent() {
-  return (
-    <div className="content-section">
-      <h2>Analytics</h2>
-      <p>Analytics page content coming soon...</p>
-    </div>
-  );
-}
-
-function SettingsContent() {
-  return <Settings />;
 }
 
 export default Dashboard;
