@@ -110,12 +110,12 @@ async function deleteTransaction(req: Request, res: Response) {
         // If amount is -100, subtracting it adds 100 back to the balance
         const newBalance = account.balanace - transaction.amount;
         const update = await accountsCollection.updateOne(
-            { _id: accountObjectId }, 
-            { 
-                $set: { 
+            { _id: accountObjectId },
+            {
+                $set: {
                     balanace: newBalance,
-                    updatedAt: new Date()
-                } 
+                    updatedAt: new Date(),
+                },
             }
         );
 
@@ -140,12 +140,12 @@ async function addTransaction(req: Request, res: Response) {
         const bodyLength = Object.keys(req.body).length;
         const paramsLength = Object.keys(req.params).length;
 
-        if (paramsLength !== 1 || bodyLength !== 4) {
+        if (paramsLength !== 1 || bodyLength !== 5) {
             return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
         }
 
         const { accountId } = req.params;
-        const { amount, category, type, date } = req.body;
+        const { name, amount, category, type, date } = req.body;
 
         if (!accountId || amount === undefined || !category || !type || !date) {
             return badRequest(res, Messages.MISSING_FIELDS);
@@ -164,14 +164,14 @@ async function addTransaction(req: Request, res: Response) {
         // ADDED: Update account balance when creating transaction
         // Amount should be negative for expenses (from frontend)
         const newBalance = account.balanace + amount;
-        
+
         const balanceUpdate = await accountsCollection.updateOne(
             { _id: accountObjectId },
-            { 
-                $set: { 
+            {
+                $set: {
                     balanace: newBalance,
-                    updatedAt: new Date()
-                }
+                    updatedAt: new Date(),
+                },
             }
         );
 
@@ -182,6 +182,7 @@ async function addTransaction(req: Request, res: Response) {
         const newTransaction: Transactions = {
             userId: userId,
             accountId: new ObjectId(accountId),
+            name: name,
             amount: amount,
             category: category,
             type: type,
@@ -192,10 +193,7 @@ async function addTransaction(req: Request, res: Response) {
 
         if (!transaction.acknowledged) {
             // Rollback balance update if transaction creation fails
-            await accountsCollection.updateOne(
-                { _id: accountObjectId },
-                { $set: { balanace: account.balanace } }
-            );
+            await accountsCollection.updateOne({ _id: accountObjectId }, { $set: { balanace: account.balanace } });
             return badRequest(res, Messages.TRANSACTION + Messages.FAILED);
         }
 
