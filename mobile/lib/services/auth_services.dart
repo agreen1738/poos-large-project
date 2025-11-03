@@ -1,6 +1,50 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
+class User {
+  final String id;
+  final String firstName;
+  final String lastName;
+  final String email;
+  final String? phone;
+  final String createdAt;
+  final String? status;
+
+  User({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+    this.phone,
+    required this.createdAt,
+    this.status,
+  });
+
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['_id'] ?? '',
+      firstName: json['firstName'] ?? '',
+      lastName: json['lastName'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'],
+      createdAt: json['createdAt'] ?? '',
+      status: json['status'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'firstName': firstName,
+      'lastName': lastName,
+      'email': email,
+      'phone': phone,
+      'createdAt': createdAt,
+      'status': status,
+    };
+  }
+}
 
 class RegisterData {
   final String firstName;
@@ -31,15 +75,34 @@ class RegisterData {
   }
 }
 
+class LoginCredentials {
+  final String login;
+  final String password;
+
+  LoginCredentials({
+    required this.login,
+    required this.password,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'login': login,
+      'password': password,
+    };
+  }
+}
+
 class AuthService {
-  // url for android emulator
+
+  //static const String baseUrl = 'http://159.203.128.240:5050/api';
   static const String baseUrl = 'http://10.0.2.2:5050/api';
   
   // register new user
   Future<void> register(RegisterData data) async {
     try {
       print('Sending registration request with data: ${data.toJson()}');
-      
+      print('NUmber of fields: ${data.toJson().keys.length}');
+
       final response = await http.post(
         Uri.parse('$baseUrl/register'),
         headers: {
@@ -52,7 +115,7 @@ class AuthService {
       print('Registration response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Registration successful
+        // registration successful
         print('Registration successful');
         return;
       } else {
@@ -70,6 +133,157 @@ class AuthService {
       }
       throw Exception('Registration failed: $error');
     }
+  }
+
+  // login user 
+  Future<User> login(LoginCredentials credentials) async {
+    try{
+      print('Sending login request to: $baseUrl/login');
+      print('Login payload: ${credentials.toJson()}');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/login'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(credentials.toJson()),
+      );
+
+      print('Login response status: ${response.statusCode}');
+      print('Login reponse body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final token = responseData['token'];
+
+        if (token == null || token.isEmpty) {
+          throw Exception('No token received from server');
+        }
+
+        // Step 2: Store token
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', token);
+        print('Token stored successfully');
+
+        // Step 3: Try to fetch user details
+        try {
+          print('Attempting to fetch user data from /me endpoint...');
+          final user = await getCurrentUserFromAPI();
+          print('User data received: ${user.toJson()}');
+          await prefs.setString('user_data', jsonEncode(user.toJson()));
+          return user;
+        } catch (meError) {
+          print('/me endpoint not available, creating temporary user data');
+          // If /me doesn't exist, create temporary user data
+          final tempUser = User(
+            id: 'temp',
+            firstName: credentials.login.split('@')[0],
+            lastName: 'User',
+            email: credentials.login,
+            createdAt: DateTime.now().toIso8601String(),
+          );
+          await prefs.setString('user_data', jsonEncode(tempUser.toJson()));
+          return tempUser;
+        }
+      } else if (response.statusCode == 401) {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['error'] ?? '';
+        
+        // Check if it's an email verification error
+        if (errorMessage.contains('not verified')) {
+          throw Exception('Please verify your email before logging in. Check your inbox for the verification link.');
+        } else {
+          throw Exception('Invalid email or password');
+        }
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['error'] ?? 
+                           errorData['message'] ?? 
+                           'Login failed';
+        throw Exception(errorMessage);
+      }
+    } catch (error) {
+      print('Login error: $error');
+      
+      // Clear any stored data on error
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('user_data');
+      
+      if (error is Exception) {
+        rethrow;
+      }
+      throw Exception('Login failed: $error');
+    }
+  }
+
+  // Fetch current user from /me endpoint
+  Future<User> getCurrentUserFromAPI() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        throw Exception('No authentication token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final userData = jsonDecode(response.body);
+        return User.fromJson(userData);
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['error'] ?? 
+                           errorData['message'] ?? 
+                           'Failed to fetch user data';
+        throw Exception(errorMessage);
+      }
+    } catch (error) {
+      print('Get current user error: $error');
+      if (error is Exception) {
+        rethrow;
+      }
+      throw Exception('Failed to fetch user data: $error');
+    }
+  }
+
+  // Logout user
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+    await prefs.remove('user_data');
+  }
+
+  // Check if user is authenticated
+  Future<bool> isAuthenticated() async {
+    final token = await getToken();
+    return token != null && token.isNotEmpty;
+  }
+
+  // Get current user data from SharedPreferences
+  Future<User?> getCurrentUser() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userData = prefs.getString('user_data');
+      if (userData != null) {
+        return User.fromJson(jsonDecode(userData));
+      }
+      return null;
+    } catch (error) {
+      print('Get current user error: $error');
+      return null;
+    }
+  }
+
+  // Get auth token
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token');
   }
 }
 
