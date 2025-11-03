@@ -103,13 +103,16 @@ async function deleteAccount(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const accountId = new ObjectId(id);
         const database = getDB();
-        const collection = database.collection('Accounts');
+        const accoutnCollection = database.collection('Accounts');
+        const transactionCollection = database.collection('Transactions');
 
-        const account = await collection.deleteOne({ _id: accountId, userId: userId });
+        const transaction = await transactionCollection.deleteMany({ accountId: accountId });
 
-        if (account.deletedCount === 0) {
-            return badRequest(res, Messages.FAILED);
-        }
+        if (transaction.deletedCount === 0) console.log('Account has no transactions');
+
+        const account = await accoutnCollection.deleteOne({ _id: accountId, userId: userId });
+
+        if (account.deletedCount === 0) return badRequest(res, Messages.FAILED);
 
         return deleted(res, Messages.ACCOUNT + Messages.DELETED);
     } catch (error) {
@@ -134,9 +137,7 @@ async function updateAccount(req: Request, res: Response) {
         const allowedFields = ['accountName', 'accountType', 'accountNumber', 'balanace', 'currency', 'isActive'];
         const fields = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
 
-        if (Object.keys(fields).length === 0) {
-            return badRequest(res, Messages.MISSING_FIELDS);
-        }
+        if (Object.keys(fields).length === 0) return badRequest(res, Messages.MISSING_FIELDS);
 
         const account = await collection.findOneAndUpdate(
             { _id: accountId, userId: userId },
@@ -144,9 +145,7 @@ async function updateAccount(req: Request, res: Response) {
             { returnDocument: 'after' }
         );
 
-        if (!account) {
-            return notFound(res, Messages.ACCOUNT + Messages.FAILED);
-        }
+        if (!account) return notFound(res, Messages.ACCOUNT + Messages.FAILED);
 
         return updated(res, Messages.ACCOUNT + Messages.UPDATED);
     } catch (error) {
