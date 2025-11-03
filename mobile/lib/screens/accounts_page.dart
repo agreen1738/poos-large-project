@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import './dashboard_page.dart';
 import './transactions_page.dart';
 import './analytics_page.dart';
+import '../services/auth_services.dart';
 
 class AccountsPage extends StatefulWidget {
   const AccountsPage({super.key});
@@ -11,6 +12,31 @@ class AccountsPage extends StatefulWidget {
 }
 
 class _AccountsPageState extends State<AccountsPage> {
+
+  User? _currentUser;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = await authService.getCurrentUser();
+      setState(() {
+        _currentUser = user;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   // Sample account data 
   final List<Map<String, dynamic>> accounts = [
     {'accountNumber': 'XXXXXXXX', 'balance': 1204.45},
@@ -169,10 +195,12 @@ class _AccountsPageState extends State<AccountsPage> {
                           ),
                         ),
                         const Spacer(),
-                        const Column(
+                        Column(
                           children: [
                             Text(
-                              'Hello [Name]!!',
+                              _isLoading 
+                                ? 'Hello!' 
+                                : 'Hello ${_currentUser?.firstName ?? 'User'}!',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -209,79 +237,85 @@ class _AccountsPageState extends State<AccountsPage> {
               ),
               // Main content
               Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(1),
-                      topRight: Radius.circular(1),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'ACCOUNTS',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                child: Stack( // <--- 1. ADDED STACK
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(1),
+                          topRight: Radius.circular(1),
                         ),
-                        const SizedBox(height: 20),
-                        // Grey container box with white account cards inside
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            border: Border.all(color: Colors.grey[400]!),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            children: accounts.asMap().entries.map((entry) {
-                              int index = entry.key;
-                              var account = entry.value;
-                              bool isLast = index == accounts.length - 1;
-                              
-                              return Padding(
-                                padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-                                child: _buildAccountCard(
-                                  account['accountNumber'],
-                                  account['balance'],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 180),
-                        // Logout button
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {},
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.grey[300],
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 30,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Logout',
+                      ),
+                      child: SingleChildScrollView(
+                        // 4. UPDATED PADDING
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 80), 
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'ACCOUNTS',
                               style: TextStyle(
-                                color: Colors.black,
                                 fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                            const SizedBox(height: 20),
+                            // Grey container box with white account cards inside
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                border: Border.all(color: Colors.grey[400]!),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: accounts.asMap().entries.map((entry) {
+                                  int index = entry.key;
+                                  var account = entry.value;
+                                  bool isLast = index == accounts.length - 1;
+                                  
+                                  return Padding(
+                                    padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+                                    child: _buildAccountCard(
+                                      account['accountNumber'],
+                                      account['balance'],
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            // 2. REMOVED SIZEDBOX AND OLD BUTTON
+                          ],
+                        ),
+                      ),
+                    ),
+                    // 3. ADDED POSITIONED LOGOUT BUTTON
+                    Positioned(
+                      bottom: 20,
+                      right: 20,
+                      child: TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[300],
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 30,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                      ],
+                        child: const Text(
+                          'Logout',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],

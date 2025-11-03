@@ -3,7 +3,7 @@ import './dashboard_page.dart';
 import './transactions_page.dart';
 import './accounts_page.dart';
 import 'package:fl_chart/fl_chart.dart';
-
+import '../services/auth_services.dart';
 
 
 class AnalyticsPage extends StatefulWidget {
@@ -14,6 +14,31 @@ class AnalyticsPage extends StatefulWidget {
 }
 
 class _AnalyticsPageState extends State<AnalyticsPage> {
+
+  User? _currentUser;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = await authService.getCurrentUser();
+      setState(() {
+        _currentUser = user;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,10 +190,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           ),
                         ),
                         const Spacer(),
-                        const Column(
+                        Column(
                           children: [
                             Text(
-                              'Hello [Name]!!',
+                              _isLoading 
+                                ? 'Hello!' 
+                                : 'Hello ${_currentUser?.firstName ?? 'User'}!',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,

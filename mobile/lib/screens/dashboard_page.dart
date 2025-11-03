@@ -4,6 +4,7 @@ import 'package:mobile/screens/accounts_page.dart';
 import 'package:mobile/screens/transactions_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:mobile/screens/analytics_page.dart';
+import '../services/auth_services.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -15,13 +16,30 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+  User? _currentUser;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
+    _loadUserData();
   }
 
+  Future<void> _loadUserData() async{
+    try {
+      final user = await authService.getCurrentUser();
+      setState(() {
+        _currentUser = user;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,17 +194,19 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
 
                         const Spacer(),
-                        const Column(
+                        Column(
                           children: [
                             Text(
-                              'Hello [Name]!!',
-                              style: TextStyle(
+                              _isLoading 
+                                ? 'Hello!' 
+                                : 'Hello ${_currentUser?.firstName ?? 'User'}!',
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
                             ),
-                            Text(
+                            const Text(
                               'Dashboard',
                               style: TextStyle(
                                 fontSize: 16,
@@ -214,174 +234,345 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ],
               ),
-              // Main content
+              // Main content with fixed logout button
               Expanded(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(1),
-                      topRight: Radius.circular(1),
-                    ),
-                  ),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 20),
-                        Row(
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(1),
+                          topRight: Radius.circular(1),
+                        ),
+                      ),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Accounts section
-                            SizedBox(
-                              width: 160,
-                              child: Column(
+                            const SizedBox(height: 20),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Accounts section
+                                SizedBox(
+                                  width: 160,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'ACCOUNTS',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Container(
+                                        height: 300,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                // Monthly breakdown section
+                                Expanded(
+                                  flex: 1,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'MONTHLY BREAKDOWN',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          border: Border.all(
+                                            color: Colors.grey[50]!,
+                                          ),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Container(
+                                              height: 250,
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                border: Border.all(
+                                                  color: Colors.grey[400]!,
+                                                ),
+                                              ),
+                                              child: PieChart(
+                                                PieChartData(
+                                                  sectionsSpace: 2,
+                                                  centerSpaceRadius: 0,
+                                                  sections: [
+                                                    PieChartSectionData(
+                                                      color: const Color(
+                                                        0xFF5DA5DA,
+                                                      ),
+                                                      value: 35,
+                                                      title: '',
+                                                      radius: 70,
+                                                    ),
+                                                    PieChartSectionData(
+                                                      color: const Color(
+                                                        0xFFFF9F5A,
+                                                      ),
+                                                      value: 20,
+                                                      title: '',
+                                                      radius: 70,
+                                                    ),
+                                                    PieChartSectionData(
+                                                      color: const Color(
+                                                        0xFFFFC842,
+                                                      ),
+                                                      value: 35,
+                                                      title: '',
+                                                      radius: 70,
+                                                    ),
+                                                    PieChartSectionData(
+                                                      color: const Color(
+                                                        0xFFB5B5B5,
+                                                      ),
+                                                      value: 10,
+                                                      title: '',
+                                                      radius: 70,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Container(
+                                              padding: const EdgeInsets.all(12),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                border: Border.all(
+                                                  color: Colors.grey[400]!,
+                                                ),
+                                                borderRadius: BorderRadius.circular(
+                                                  8,
+                                                ),
+                                              ),
+                                              child: Column(
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceAround,
+                                                    children: [
+                                                      _buildLegendItem(
+                                                        'Savings ',
+                                                        const Color(0xFFFFC842),
+                                                      ),
+                                                      _buildLegendItem(
+                                                        'Hobbies',
+                                                        const Color(0xFFFF9F5A),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceAround,
+                                                    children: [
+                                                      _buildLegendItem(
+                                                        'Living ',
+                                                        const Color(0xFF5DA5DA),
+                                                      ),
+                                                      _buildLegendItem(
+                                                        'Gambling',
+                                                        const Color(0xFFB5B5B5),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 15),
+                            // Upcoming changes section
+                            const Text(
+                              'UPCOMING CHANGES',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'ACCOUNTS',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                  // Calendar
+                                  Expanded(
+                                    flex: 2,
+                                    child: Container(
+                                      color: Colors.grey[200],
+                                      child: TableCalendar(
+                                        firstDay: DateTime.utc(2020, 1, 1),
+                                        lastDay: DateTime.utc(2030, 12, 31),
+                                        focusedDay: _focusedDay,
+                                        selectedDayPredicate: (day) {
+                                          return isSameDay(_selectedDay, day);
+                                        },
+                                        onDaySelected: (selectedDay, focusedDay) {
+                                          setState(() {
+                                            _selectedDay = selectedDay;
+                                            _focusedDay = focusedDay;
+                                          });
+                                        },
+                                        calendarFormat: CalendarFormat.month,
+                                        headerStyle: const HeaderStyle(
+                                          formatButtonVisible: false,
+                                          titleCentered: true,
+                                          titleTextStyle: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        calendarStyle: CalendarStyle(
+                                          selectedDecoration: const BoxDecoration(
+                                            color: Color(0xFF5DA5DA),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          selectedTextStyle: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                          ),
+                                          todayDecoration: BoxDecoration(
+                                            color: Colors.grey[300],
+                                            shape: BoxShape.circle,
+                                          ),
+                                          defaultTextStyle: const TextStyle(
+                                            fontSize: 11,
+                                          ),
+                                          weekendTextStyle: const TextStyle(
+                                            fontSize: 11,
+                                          ),
+                                          cellMargin: const EdgeInsets.all(4),
+                                        ),
+                                        daysOfWeekStyle: const DaysOfWeekStyle(
+                                          weekdayStyle: TextStyle(fontSize: 9),
+                                          weekendStyle: TextStyle(fontSize: 9),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  Container(
-                                    height: 300,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius: BorderRadius.circular(8),
+                                  const SizedBox(width: 15),
+                                  // Subscriptions list
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 16,
+                                        right: 16,
+                                        bottom: 10,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.topLeft,
+                                        child: Container(
+                                          height: 300,
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            border: Border.all(
+                                              color: Colors.grey[300]!,
+                                            ),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            // Monthly breakdown section
-                            Expanded(
-                              flex: 1,
+                            const SizedBox(height: 30),
+                            // Recent transactions section
+                            const Text(
+                              'RECENT TRANSACTIONS',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.grey[200],
+                              ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'MONTHLY BREAKDOWN',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  Row(
+                                    children: [
+                                      const Expanded(
+                                        flex: 1,
+                                        child: Text(
+                                          'Date',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                      const Expanded(
+                                        flex: 2,
+                                        child: Text(
+                                          'Name',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                      const Expanded(
+                                        flex: 1,
+                                        child: Text(
+                                          'Amount',
+                                          textAlign: TextAlign.right,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 10),
                                   Container(
-                                    padding: const EdgeInsets.all(16),
+                                    height: 150,
                                     decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      border: Border.all(
-                                        color: Colors.grey[50]!,
-                                      ),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Column(
-                                      children: [
-                                        Container(
-                                          height: 250,
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            border: Border.all(
-                                              color: Colors.grey[400]!,
-                                            ),
-                                          ),
-                                          child: PieChart(
-                                            PieChartData(
-                                              sectionsSpace: 2,
-                                              centerSpaceRadius: 0,
-                                              sections: [
-                                                PieChartSectionData(
-                                                  color: const Color(
-                                                    0xFF5DA5DA,
-                                                  ),
-                                                  value: 35,
-                                                  title: '',
-                                                  radius: 70,
-                                                ),
-                                                PieChartSectionData(
-                                                  color: const Color(
-                                                    0xFFFF9F5A,
-                                                  ),
-                                                  value: 20,
-                                                  title: '',
-                                                  radius: 70,
-                                                ),
-                                                PieChartSectionData(
-                                                  color: const Color(
-                                                    0xFFFFC842,
-                                                  ),
-                                                  value: 35,
-                                                  title: '',
-                                                  radius: 70,
-                                                ),
-                                                PieChartSectionData(
-                                                  color: const Color(
-                                                    0xFFB5B5B5,
-                                                  ),
-                                                  value: 10,
-                                                  title: '',
-                                                  radius: 70,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            border: Border.all(
-                                              color: Colors.grey[400]!,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Column(
-                                            children: [
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceAround,
-                                                children: [
-                                                  _buildLegendItem(
-                                                    'Savings ',
-                                                    const Color(0xFFFFC842),
-                                                  ),
-                                                  _buildLegendItem(
-                                                    'Hobbies',
-                                                    const Color(0xFFFF9F5A),
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment
-                                                        .spaceAround,
-                                                children: [
-                                                  _buildLegendItem(
-                                                    'Living ',
-                                                    const Color(0xFF5DA5DA),
-                                                  ),
-                                                  _buildLegendItem(
-                                                    'Gambling',
-                                                    const Color(0xFFB5B5B5),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
                                 ],
@@ -389,201 +580,34 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 15),
-                        // Upcoming changes section
-                        const Text(
-                          'UPCOMING CHANGES',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Calendar
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  color: Colors.grey[200],
-                                  child: TableCalendar(
-                                    firstDay: DateTime.utc(2020, 1, 1),
-                                    lastDay: DateTime.utc(2030, 12, 31),
-                                    focusedDay: _focusedDay,
-                                    selectedDayPredicate: (day) {
-                                      return isSameDay(_selectedDay, day);
-                                    },
-                                    onDaySelected: (selectedDay, focusedDay) {
-                                      setState(() {
-                                        _selectedDay = selectedDay;
-                                        _focusedDay = focusedDay;
-                                      });
-                                    },
-                                    calendarFormat: CalendarFormat.month,
-                                    headerStyle: const HeaderStyle(
-                                      formatButtonVisible: false,
-                                      titleCentered: true,
-                                      titleTextStyle: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    calendarStyle: CalendarStyle(
-                                      selectedDecoration: const BoxDecoration(
-                                        color: Color(0xFF5DA5DA),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      selectedTextStyle: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                      ),
-                                      todayDecoration: BoxDecoration(
-                                        color: Colors.grey[300],
-                                        shape: BoxShape.circle,
-                                      ),
-                                      defaultTextStyle: const TextStyle(
-                                        fontSize: 11,
-                                      ),
-                                      weekendTextStyle: const TextStyle(
-                                        fontSize: 11,
-                                      ),
-                                      cellMargin: const EdgeInsets.all(4),
-                                    ),
-                                    daysOfWeekStyle: const DaysOfWeekStyle(
-                                      weekdayStyle: TextStyle(fontSize: 9),
-                                      weekendStyle: TextStyle(fontSize: 9),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 15),
-                              // Subscriptions list
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                    top: 16,
-                                    right: 16,
-                                    bottom: 10,
-                                  ),
-                                  child: Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Container(
-                                      height: 300,
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        border: Border.all(
-                                          color: Colors.grey[300]!,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        // Recent transactions section
-                        const Text(
-                          'RECENT TRANSACTIONS',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.grey[200],
-                          ),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    flex: 1,
-                                    child: Text(
-                                      'Date',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Text(
-                                      'Name',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Text(
-                                      'Amount',
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Container(
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        // Logout button
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {},
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.grey[300],
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 30,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'Logout',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    // logout button
+                    Positioned(
+                      bottom: 20,
+                      right: 20,
+                      child: TextButton(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.grey[300],
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 30,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'Logout',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
