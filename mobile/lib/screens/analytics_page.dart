@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/screens/settings_page.dart';
 import './dashboard_page.dart';
 import './transactions_page.dart';
 import './accounts_page.dart';
@@ -189,7 +190,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     const SizedBox(height: 10),
                     _buildDrawerButton('Analytics', true),
                     const SizedBox(height: 10),
-                    _buildDrawerButton('Settings', false),
+                    _buildDrawerButton(
+                      'Settings',
+                      false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

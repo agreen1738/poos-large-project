@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/screens/settings_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'dashboard_page.dart';
 import 'accounts_page.dart';
@@ -187,7 +188,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    _buildDrawerButton('Settings', false),
+                    _buildDrawerButton(
+                      'Settings',
+                      false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),

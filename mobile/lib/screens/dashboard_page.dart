@@ -4,6 +4,7 @@ import 'package:mobile/screens/accounts_page.dart';
 import 'package:mobile/screens/transactions_page.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:mobile/screens/analytics_page.dart';
+import 'package:mobile/screens/settings_page.dart';
 import '../services/auth_services.dart';
 import './login_page.dart';
 import '../services/user_services.dart';
@@ -194,7 +195,19 @@ class _DashboardPageState extends State<DashboardPage> {
                       },
                     ),
                     const SizedBox(height: 10),
-                    _buildDrawerButton('Settings', false),
+                    _buildDrawerButton(
+                      'Settings',
+                      false,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsPage(),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
