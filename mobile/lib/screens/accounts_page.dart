@@ -3,6 +3,8 @@ import './dashboard_page.dart';
 import './transactions_page.dart';
 import './analytics_page.dart';
 import '../services/auth_services.dart';
+import '../services/user_services.dart';
+import './login_page.dart';
 
 class AccountsPage extends StatefulWidget {
   const AccountsPage({super.key});
@@ -43,6 +45,62 @@ class _AccountsPageState extends State<AccountsPage> {
     {'accountNumber': 'XXXXXXXX', 'balance': 13901.28},
     {'accountNumber': 'XXXXXXXX', 'balance': 67.89},
   ];
+
+  Future<void> _handleLogout() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        // call logout
+        await userService.logout();
+        
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (Route<dynamic> route) => false,
+          );
+        }
+      } catch (error) {
+        // Show error if logout fails
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Logout failed: ${error.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -237,7 +295,7 @@ class _AccountsPageState extends State<AccountsPage> {
               ),
               // Main content
               Expanded(
-                child: Stack( // <--- 1. ADDED STACK
+                child: Stack( 
                   children: [
                     Container(
                       decoration: const BoxDecoration(
@@ -248,7 +306,6 @@ class _AccountsPageState extends State<AccountsPage> {
                         ),
                       ),
                       child: SingleChildScrollView(
-                        // 4. UPDATED PADDING
                         padding: const EdgeInsets.fromLTRB(20, 20, 20, 80), 
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,17 +342,15 @@ class _AccountsPageState extends State<AccountsPage> {
                                 }).toList(),
                               ),
                             ),
-                            // 2. REMOVED SIZEDBOX AND OLD BUTTON
                           ],
                         ),
                       ),
                     ),
-                    // 3. ADDED POSITIONED LOGOUT BUTTON
                     Positioned(
                       bottom: 20,
                       right: 20,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _handleLogout,
                         style: TextButton.styleFrom(
                           backgroundColor: Colors.grey[300],
                           padding: const EdgeInsets.symmetric(

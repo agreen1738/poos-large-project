@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_page.dart';
+import '../services/user_services.dart'; // Import the user services
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -30,35 +30,120 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return null;
   }
 
-  Future<void> _handleResetPassword() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+  Future<void> _sendResetLink() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // TODO: Implement password reset logic
-      await Future.delayed(const Duration(seconds: 2));
+    setState(() {
+      _isLoading = true;
+    });
 
+    try {
+      await userService.sendForgotPasswordEmail(_emailController.text.trim());
+      
+      // Success
+      if (mounted) {
+        _showSuccessDialog();
+      }
+    } catch (error) {
+      print('Password reset error: $error');
+      
+      // Show error message
+      if (mounted) {
+        _showErrorDialog(error.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset link sent to your email'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate back to login after brief delay
-        await Future.delayed(const Duration(seconds: 1));
-        if (mounted) {
-          Navigator.pop(context);
-        }
       }
     }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 12),
+              Text('Email Sent'),
+            ],
+          ),
+          content: Text(
+            'A password reset link has been sent to ${_emailController.text}. Please check your email inbox and follow the instructions to reset your password.',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); 
+                Navigator.of(context).pop(); 
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6E7BF2),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 28),
+              SizedBox(width: 12),
+              Text('Error'),
+            ],
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6E7BF2),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -112,7 +197,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
                     // Subtitle
                     const Text(
-                      'Enter your email address and we\'ll send you a link to reset your password.',
+                      'Enter your email address and we\'ll send you a\nlink to reset your password.',
                       style: TextStyle(
                         fontSize: 16,
                         color: Color(0xFF757575),
@@ -122,7 +207,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     ),
                     const SizedBox(height: 40),
 
-                    // email address 
+                    // Email Address Field
                     TextFormField(
                       controller: _emailController,
                       validator: _validateEmail,
@@ -149,9 +234,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // send reset link Button
+                    // Send Reset Link Button
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _handleResetPassword,
+                      onPressed: _isLoading ? null : _sendResetLink,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6E7BF2),
                         foregroundColor: Colors.white,
@@ -200,12 +285,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           onPressed: _isLoading
                               ? null
                               : () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const LoginPage(),
-                                    ),
-                                  );
+                                  Navigator.pop(context);
                                 },
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.only(left: 4),

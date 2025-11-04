@@ -4,6 +4,8 @@ import 'dashboard_page.dart';
 import 'accounts_page.dart';
 import 'analytics_page.dart';
 import '../services/auth_services.dart';
+import '../services/user_services.dart';
+import './login_page.dart';
 
 class TransactionsPage extends StatefulWidget {
   const TransactionsPage({super.key});
@@ -37,6 +39,62 @@ class _TransactionsPageState extends State<TransactionsPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        // call logout
+        await userService.logout();
+        
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (Route<dynamic> route) => false,
+          );
+        }
+      } catch (error) {
+        // Show error if logout fails
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Logout failed: ${error.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -394,7 +452,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       bottom: 20,
                       right: 20,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _handleLogout,
                         style: TextButton.styleFrom(
                           backgroundColor: Colors.grey[300],
                           padding: const EdgeInsets.symmetric(

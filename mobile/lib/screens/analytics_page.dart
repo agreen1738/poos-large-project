@@ -4,7 +4,8 @@ import './transactions_page.dart';
 import './accounts_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/auth_services.dart';
-
+import '../services/user_services.dart';
+import './login_page.dart';
 
 class AnalyticsPage extends StatefulWidget {
   const AnalyticsPage({super.key});
@@ -36,6 +37,62 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        // call logout
+        await userService.logout();
+        
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+            (Route<dynamic> route) => false,
+          );
+        }
+      } catch (error) {
+        // Show error if logout fails
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Logout failed: ${error.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -365,12 +422,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ),
                       ),
                     ),
-                    // Fixed logout button at bottom right
+                    // logout button
                     Positioned(
                       bottom: 20,
                       right: 20,
                       child: TextButton(
-                        onPressed: () {},
+                        onPressed: _handleLogout,
                         style: TextButton.styleFrom(
                           backgroundColor: Colors.grey[300],
                           padding: const EdgeInsets.symmetric(
