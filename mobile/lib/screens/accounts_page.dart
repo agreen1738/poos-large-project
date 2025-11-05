@@ -31,36 +31,54 @@ class _AccountsPageState extends State<AccountsPage> {
   Future<void> _loadUserData() async {
     try {
       final user = await authService.getCurrentUser();
-      setState(() {
-        _currentUser = user;
-      });
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
     } catch (e) {
       print('Error loading user data: $e');
     }
   }
 
   Future<void> _loadAccounts() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
+      print('Loading accounts...'); // Debug
       final accounts = await accountService.getAccounts();
+      print('Loaded ${accounts.length} accounts'); // Debug
+      
       double total = 0.0;
       for (var account in accounts) {
+        print('Account: ${account.accountName}, Balance: ${account.balance}'); // Debug
         total += account.balance;
       }
 
-      setState(() {
-        _accounts = accounts;
-        _totalBalance = total;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _accounts = accounts;
+          _totalBalance = total;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       print('Error loading accounts: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading accounts: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -188,6 +206,7 @@ class _AccountsPageState extends State<AccountsPage> {
                       const SizedBox(height: 8),
                       TextField(
                         controller: accountNumberController,
+                        keyboardType: TextInputType.number,
                         decoration: InputDecoration(
                           hintText: 'e.g., 1234567890',
                           hintStyle: TextStyle(color: Colors.grey[400]),
@@ -305,6 +324,16 @@ class _AccountsPageState extends State<AccountsPage> {
                                   return;
                                 }
 
+                                if (accountNumberController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter an account number'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
                                 if (balanceController.text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -318,6 +347,9 @@ class _AccountsPageState extends State<AccountsPage> {
                                 try {
                                   final balance = double.parse(balanceController.text);
                                   final accountNumber = int.parse(accountNumberController.text);
+                                  
+                                  print('Creating account: ${accountNameController.text}'); // Debug
+                                  
                                   await accountService.createAccount(
                                     accountNameController.text,
                                     selectedAccountType ?? 'Checking',
@@ -337,8 +369,10 @@ class _AccountsPageState extends State<AccountsPage> {
                                     );
                                   }
 
+                                  // Reload accounts
                                   await _loadAccounts();
                                 } catch (e) {
+                                  print('Error creating account: $e'); // Debug
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -509,13 +543,16 @@ class _AccountsPageState extends State<AccountsPage> {
     return accountType.toUpperCase();
   }
 
-  String _maskAccountNumber(String accountNumber) {
+  String _maskAccountNumber(String? accountNumber) {
+    if (accountNumber == null || accountNumber.isEmpty) return 'N/A';
     if (accountNumber.length <= 4) return accountNumber;
     return '****${accountNumber.substring(accountNumber.length - 4)}';
   }
 
   @override
   Widget build(BuildContext context) {
+    print('Building AccountsPage, accounts: ${_accounts.length}, loading: $_isLoading'); // Debug
+    
     return Scaffold(
       drawer: Drawer(
         child: Container(
@@ -649,10 +686,7 @@ class _AccountsPageState extends State<AccountsPage> {
                       height: 80,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(10),
-                          topRight: Radius.circular(10),
-                        ),
+                        borderRadius: BorderRadius.circular(10),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -722,7 +756,7 @@ class _AccountsPageState extends State<AccountsPage> {
               ),
               // Stats Bar
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -790,76 +824,99 @@ class _AccountsPageState extends State<AccountsPage> {
                           bottomRight: Radius.circular(10)
                         ),
                       ),
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'My Accounts',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                ElevatedButton.icon(
-                                  onPressed: _showAddAccountDialog,
-                                  icon: const Icon(Icons.add, size: 20),
-                                  label: const Text('Add Account'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF695EE8),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
+                      child: RefreshIndicator(
+                        onRefresh: _loadAccounts,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'My Accounts',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            _isLoading
-                                ? const Center(
-                                    child: CircularProgressIndicator(
-                                      color: Color(0xFF695EE8),
-                                    ),
-                                  )
-                                : _accounts.isEmpty
-                                    ? Center(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(40.0),
-                                          child: Text(
-                                            'No accounts yet. Add your first account!',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.grey[600],
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      )
-                                    : GridView.builder(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 1,
-                                          childAspectRatio: 2.5,
-                                          crossAxisSpacing: 16,
-                                          mainAxisSpacing: 16,
-                                        ),
-                                        itemCount: _accounts.length,
-                                        itemBuilder: (context, index) {
-                                          final account = _accounts[index];
-                                          return _buildAccountCard(account);
-                                        },
+                                  ElevatedButton.icon(
+                                    onPressed: _showAddAccountDialog,
+                                    icon: const Icon(Icons.add, size: 20),
+                                    label: const Text('Add Account'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF695EE8),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
                                       ),
-                          ],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              _isLoading
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(40.0),
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF695EE8),
+                                        ),
+                                      ),
+                                    )
+                                  : _accounts.isEmpty
+                                      ? Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(40.0),
+                                            child: Column(
+                                              children: [
+                                                Icon(
+                                                  Icons.account_balance_wallet_outlined,
+                                                  size: 64,
+                                                  color: Colors.grey[400],
+                                                ),
+                                                const SizedBox(height: 16),
+                                                Text(
+                                                  'No accounts yet',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  'Add your first account to get started!',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[500],
+                                                  ),
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      : ListView.builder(
+                                          shrinkWrap: true,
+                                          physics: const NeverScrollableScrollPhysics(),
+                                          itemCount: _accounts.length,
+                                          itemBuilder: (context, index) {
+                                            final account = _accounts[index];
+                                            return Padding(
+                                              padding: const EdgeInsets.only(bottom: 16),
+                                              child: _buildAccountCard(account),
+                                            );
+                                          },
+                                        ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -898,117 +955,72 @@ class _AccountsPageState extends State<AccountsPage> {
   }
 
   Widget _buildAccountCard(Account account) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border.all(color: Colors.grey[300]!, width: 1.5),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getAccountTypeColor(account.accountType),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      _getAccountTypeLabel(account.accountType),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    account.accountName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.grey[50],
+      border: Border.all(color: Colors.grey[300]!, width: 1.5),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header row with type badge, name, and delete button
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getAccountTypeColor(account.accountType),
+                borderRadius: BorderRadius.circular(4),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => _deleteAccount(account.id),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              child: Text(
+                _getAccountTypeLabel(account.accountType),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ACCOUNT NUMBER',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _maskAccountNumber(account.accountNumber ?? 'N/A'),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                account.accountName,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'BALANCE',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\${account.balance.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          if (account.institution != null && account.institution!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Row(
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+              onPressed: () => _deleteAccount(account.id),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Account number and balance row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'INSTITUTION',
+                  'ACCOUNT NUMBER',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[600],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 4),
                 Text(
-                  account.institution!,
+                  _maskAccountNumber(account.accountNumber),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -1016,32 +1028,82 @@ class _AccountsPageState extends State<AccountsPage> {
                 ),
               ],
             ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'BALANCE',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '\$${account.balance.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ],
-          const SizedBox(height: 4),
+        ),
+        
+        // Institution (if available)
+        if (account.institution != null && account.institution!.isNotEmpty) ...[
+          const SizedBox(height: 8),
           Row(
             children: [
               Text(
-                'STATUS',
+                'INSTITUTION: ',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[600],
                 ),
               ),
-              const SizedBox(width: 8),
-              const Text(
-                'Active',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  account.institution!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
         ],
-      ),
-    );
-  }
+        
+        // Status
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text(
+              'STATUS: ',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const Text(
+              'Active',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildDrawerButton(String text, bool isSelected, {VoidCallback? onTap}) {
     return GestureDetector(
