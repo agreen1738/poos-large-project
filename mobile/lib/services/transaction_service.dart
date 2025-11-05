@@ -1,6 +1,5 @@
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'auth_services.dart';
+import 'package:dio/dio.dart';
+import './api_services.dart';
 
 class Transaction {
   final String? id;
@@ -77,33 +76,25 @@ class CreateTransactionData {
 }
 
 class TransactionService {
-
-  //static const String baseUrl = 'http://159.203.128.240:5050/api';
-  static const String baseUrl = 'http://10.0.2.2:5050/api';
+  final ApiService _apiService = apiService;
   
   // Get all transactions for the logged-in user
   Future<List<Transaction>> getTransactions() async {
     try {
-      final token = await authService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/transactions'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await _apiService.get('/transactions');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final List<dynamic> data = response.data;
         return data.map((json) => Transaction.fromJson(json)).toList();
       } else {
-        final errorData = json.decode(response.body);
+        final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to fetch transactions');
       }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Failed to fetch transactions';
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Failed to fetch transactions: $e');
     }
@@ -112,26 +103,20 @@ class TransactionService {
   // Get transactions for a specific account
   Future<List<Transaction>> getAccountTransactions(String accountId) async {
     try {
-      final token = await authService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/transactions/$accountId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await _apiService.get('/transactions/$accountId');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final List<dynamic> data = response.data;
         return data.map((json) => Transaction.fromJson(json)).toList();
       } else {
-        final errorData = json.decode(response.body);
+        final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to fetch account transactions');
       }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Failed to fetch account transactions';
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Failed to fetch account transactions: $e');
     }
@@ -140,25 +125,19 @@ class TransactionService {
   // Get a single transaction
   Future<Transaction> getTransaction(String accountId, String transactionId) async {
     try {
-      final token = await authService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/transactions/$accountId/$transactionId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await _apiService.get('/transactions/$accountId/$transactionId');
 
       if (response.statusCode == 200) {
-        return Transaction.fromJson(json.decode(response.body));
+        return Transaction.fromJson(response.data);
       } else {
-        final errorData = json.decode(response.body);
+        final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to fetch transaction');
       }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Failed to fetch transaction';
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Failed to fetch transaction: $e');
     }
@@ -167,24 +146,20 @@ class TransactionService {
   // Create a new transaction and update account balance
   Future<void> createTransaction(String accountId, CreateTransactionData data) async {
     try {
-      final token = await authService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/transactions/$accountId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode(data.toJson()),
+      final response = await _apiService.post(
+        '/transactions/$accountId',
+        data: data.toJson(),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        final errorData = json.decode(response.body);
+        final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to create transaction');
       }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Failed to create transaction';
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Failed to create transaction: $e');
     }
@@ -193,23 +168,17 @@ class TransactionService {
   // Delete a transaction and restore account balance
   Future<void> deleteTransaction(String accountId, String transactionId) async {
     try {
-      final token = await authService.getToken();
-      if (token == null) {
-        throw Exception('No authentication token found');
-      }
-
-      final response = await http.delete(
-        Uri.parse('$baseUrl/transactions/$accountId/$transactionId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await _apiService.delete('/transactions/$accountId/$transactionId');
 
       if (response.statusCode != 200 && response.statusCode != 204) {
-        final errorData = json.decode(response.body);
+        final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to delete transaction');
       }
+    } on DioException catch (e) {
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Failed to delete transaction';
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Failed to delete transaction: $e');
     }
