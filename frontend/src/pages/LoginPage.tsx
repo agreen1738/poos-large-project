@@ -16,7 +16,7 @@ function LoginPage() {
     setError('');
 
     try {
-      const user = await authService.login({
+      await authService.login({
         login: loginName,
         password: loginPassword
       });
