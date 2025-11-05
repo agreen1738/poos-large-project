@@ -1,23 +1,14 @@
 import request from 'supertest';
-import app from '../src/app';
-import { MongoMemoryServer } from 'mongodb-memory-server';
-import { connectDB, disconnectDB, getDB } from '../src/database';
-import { Messages } from '../src/utils/messageHandler';
-
-let server: MongoMemoryServer;
-let uri: string;
+import app from '../src/app.js';
+import { changeTestUserEmailStatus, setupDB, tearDownDB } from './setup.js';
+import { Messages } from '../src/utils/messageHandler.js';
 
 beforeAll(async () => {
-    server = await MongoMemoryServer.create();
-    uri = server.getUri();
-    process.env.DB_NAME = 'testDB';
-    process.env.JWT_SECRET = 'testJwtSecret';
-    await connectDB(uri);
+    await setupDB();
 });
 
 afterAll(async () => {
-    await disconnectDB();
-    await server.stop();
+    await tearDownDB();
 });
 
 describe('Auth API Integration Test', () => {
@@ -67,9 +58,7 @@ describe('Auth API Integration Test', () => {
     });
 
     test('should login user', async () => {
-        const database = getDB();
-        const collection = database.collection('User');
-        const user = await collection.updateOne({ email: 'gradimbuyi@outlook.com' }, { $set: { status: 'Confirmed' } });
+        changeTestUserEmailStatus();
 
         const res = await request(app)
             .post('/api/login')
