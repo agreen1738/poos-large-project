@@ -6,13 +6,14 @@ export interface Transaction {
   id?: number;
   userId?: string;
   accountId?: string;
+  name?: string;        // Transaction name/description
   amount: number;
   category: string;
   type: string;
-  date: string;  // Changed from Date to string for frontend compatibility
-  name?: string;
+  date: string;         // Changed from Date to string for frontend compatibility
 }
 
+// WITH NAME FIELD: Now includes name as required
 export interface CreateTransactionData {
   name: string;
   amount: number;
@@ -56,10 +57,10 @@ class TransactionService {
   }
 
   // Create a new transaction and update account balance
+  // WITH NAME FIELD: Now sends 5 fields including name
   async createTransaction(accountId: string, data: CreateTransactionData): Promise<void> {
     try {
-      // Backend expects: amount, category, type, date
-      // The amount should already be negative from the frontend
+      // Backend expects: name, amount, category, type, date (5 fields)
       await api.post(`/transactions/${accountId}`, {
         name: data.name,
         amount: data.amount,
