@@ -6,7 +6,7 @@ import { connectDB, disconnectDB, getDB } from '../src/database.js';
 let server: MongoMemoryServer;
 let uri: string;
 
-async function setupDB() {
+async function setupTestDB() {
     server = await MongoMemoryServer.create();
     uri = server.getUri();
     process.env.DB_NAME = 'testDB';
@@ -14,7 +14,7 @@ async function setupDB() {
     await connectDB(uri);
 }
 
-async function tearDownDB() {
+async function tearDownTestDB() {
     await disconnectDB();
     await server.stop();
 }
@@ -44,4 +44,4 @@ async function getTestUserToken() {
     return res.body.token;
 }
 
-export { setupDB, tearDownDB, createTestUser, changeTestUserEmailStatus, getTestUserToken };
+export { setupTestDB, tearDownTestDB, createTestUser, changeTestUserEmailStatus, getTestUserToken };

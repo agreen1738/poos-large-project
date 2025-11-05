@@ -1,20 +1,20 @@
 import request from 'supertest';
 import app from '../src/app.js';
 import { Messages } from '../src/utils/messageHandler.js';
-import { changeTestUserEmailStatus, createTestUser, getTestUserToken, setupDB, tearDownDB } from './setup.js';
+import { changeTestUserEmailStatus, createTestUser, getTestUserToken, setupTestDB, tearDownTestDB } from './setup.js';
 
 let token: string;
 let accountId: string;
 
 beforeAll(async () => {
-    await setupDB();
+    await setupTestDB();
     await createTestUser();
     await changeTestUserEmailStatus();
     token = await getTestUserToken();
 });
 
 afterAll(async () => {
-    await tearDownDB();
+    await tearDownTestDB();
 });
 
 describe('Accounts API Integration Test', () => {

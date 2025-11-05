@@ -1,14 +1,14 @@
 import request from 'supertest';
 import app from '../src/app.js';
-import { changeTestUserEmailStatus, setupDB, tearDownDB } from './setup.js';
+import { changeTestUserEmailStatus, setupTestDB, tearDownTestDB } from './setup.js';
 import { Messages } from '../src/utils/messageHandler.js';
 
 beforeAll(async () => {
-    await setupDB();
+    await setupTestDB();
 });
 
 afterAll(async () => {
-    await tearDownDB();
+    await tearDownTestDB();
 });
 
 describe('Auth API Integration Test', () => {
