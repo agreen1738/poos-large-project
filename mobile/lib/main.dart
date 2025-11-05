@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/screens/dashboard_page.dart';
 import 'screens/login_page.dart';
-
 //import 'package:http/http.dart' as http;
 //import 'dart:convert';
-
 
 void main() {
   runApp(const MyApp());

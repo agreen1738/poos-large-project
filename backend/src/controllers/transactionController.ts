@@ -11,7 +11,6 @@ async function getTransactions(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const transactions = await collection.find({ userId }, { projection: { userId: 0 } }).toArray();
 
-        // FIXED: Return empty array instead of error when no transactions exist
         return res.status(200).json(transactions);
     } catch (error) {
         internalServerError(res, error);
@@ -37,7 +36,6 @@ async function getAccountTransactions(req: Request, res: Response) {
             .find({ userId, accountId: accountObjectId }, { projection: { userId: 0 } })
             .toArray();
 
-        // FIXED: Return empty array instead of error when no transactions exist
         return res.status(200).json(transactions);
     } catch (error) {
         internalServerError(res, error);
@@ -106,8 +104,7 @@ async function deleteTransaction(req: Request, res: Response) {
 
         if (!transaction) return notFound(res, Messages.TRANSACTION + Messages.FAILED);
 
-        // FIXED: Restore balance by subtracting the transaction amount (since amount is already negative)
-        // If amount is -100, subtracting it adds 100 back to the balance
+        // Restore balance by subtracting the transaction amount (since amount is already negative)
         const newBalance = account.balanace - transaction.amount;
         const update = await accountsCollection.updateOne(
             { _id: accountObjectId },
@@ -140,6 +137,7 @@ async function addTransaction(req: Request, res: Response) {
         const bodyLength = Object.keys(req.body).length;
         const paramsLength = Object.keys(req.params).length;
 
+        // WITH NAME FIELD: Now expecting 5 fields
         if (paramsLength !== 1 || bodyLength !== 5) {
             return badRequest(res, Messages.INCORRECT_FIELD_COUNT);
         }
@@ -147,7 +145,7 @@ async function addTransaction(req: Request, res: Response) {
         const { accountId } = req.params;
         const { name, amount, category, type, date } = req.body;
 
-        if (!accountId || amount === undefined || !category || !type || !date) {
+        if (!accountId || !name || amount === undefined || !category || !type || !date) {
             return badRequest(res, Messages.MISSING_FIELDS);
         }
 
@@ -161,8 +159,7 @@ async function addTransaction(req: Request, res: Response) {
 
         if (!account) return notFound(res, Messages.ACCOUNT + Messages.FAILED);
 
-        // ADDED: Update account balance when creating transaction
-        // Amount should be negative for expenses (from frontend)
+        // Update account balance when creating transaction
         const newBalance = account.balanace + amount;
 
         const balanceUpdate = await accountsCollection.updateOne(

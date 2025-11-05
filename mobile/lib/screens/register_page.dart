@@ -96,8 +96,7 @@ class _RegisterPageState extends State<RegisterPage>{
       });
 
       try {
-        // Create registration data matching backend expectations
-        final registerData = RegisterData(
+          final registerData = RegisterData(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
           email: _emailController.text.trim(),
@@ -106,10 +105,10 @@ class _RegisterPageState extends State<RegisterPage>{
           confirmPassword: _confirmPasswordController.text,
         );
 
-        // Call register API
+        // call register API
         await authService.register(registerData);
 
-        // Show success message
+        // show success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
