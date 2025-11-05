@@ -6,6 +6,8 @@ import 'accounts_page.dart';
 import 'analytics_page.dart';
 import '../services/auth_services.dart';
 import '../services/user_services.dart';
+import '../services/transaction_service.dart';
+import '../services/account_services.dart';
 import './login_page.dart';
 
 class TransactionsPage extends StatefulWidget {
@@ -20,11 +22,17 @@ class _TransactionsPageState extends State<TransactionsPage> {
   DateTime? _selectedDay;
   User? _currentUser;
   bool _isLoading = true;
-
+  List<Transaction> _transactions = [];
+  List<Account> _accounts = [];
+  String? _selectedAccountId;
+  String? _selectedCategory;
+  
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadAccounts();
+    _loadTransactions();
     _selectedDay = _focusedDay;
   }
 
@@ -33,18 +41,426 @@ class _TransactionsPageState extends State<TransactionsPage> {
       final user = await authService.getCurrentUser();
       setState(() {
         _currentUser = user;
-        _isLoading = false;
       });
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadAccounts() async {
+    try {
+      final accounts = await accountService.getAccounts();
+      setState(() {
+        _accounts = accounts;
+        if (accounts.isNotEmpty) {
+          _selectedAccountId = accounts[0].id;
+        }
+      });
+    } catch (e) {
+      print('Error loading accounts: $e');
+    }
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      final transactions = await transactionService.getTransactions();
+      setState(() {
+        _transactions = transactions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading transactions: $e');
       setState(() {
         _isLoading = false;
       });
     }
   }
 
+  List<Transaction> _getTransactionsForDate(DateTime date) {
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return _transactions.where((t) => t.date == dateStr).toList();
+  }
+
+  List<Transaction> _getFilteredTransactions() {
+    if (_selectedDay == null) {
+      // Show transactions for the current month
+      return _transactions.where((t) {
+        final transDate = DateTime.parse(t.date);
+        return transDate.year == _focusedDay.year && 
+               transDate.month == _focusedDay.month;
+      }).toList();
+    } else {
+      return _getTransactionsForDate(_selectedDay!);
+    }
+  }
+
+  void _showAddTransactionDialog() {
+    final accountController = TextEditingController();
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+    String? selectedCategory = 'living';
+    String? selectedAccountId = _selectedAccountId;
+    DateTime selectedDate = _selectedDay ?? DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Add Transaction',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 28),
+                            onPressed: () => Navigator.of(context).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Account',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedAccountId,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                        items: _accounts.map((account) {
+                          return DropdownMenuItem(
+                            value: account.id,
+                            child: Text('${account.accountName} (\$${account.balance.toStringAsFixed(2)})'),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedAccountId = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Transaction Name',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: nameController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Grocery Store',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Amount (will be deducted from account)',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enter positive number - will be automatically deducted',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Category',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedCategory,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8), width: 2),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8), width: 2),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8), width: 2),
+                          ),
+                        ),
+                        items: ['savings', 'living', 'hobbies', 'gambling']
+                            .map((category) => DropdownMenuItem(
+                                  value: category,
+                                  child: Text(category[0].toUpperCase() + category.substring(1)),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedCategory = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Date',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          hintText: '${selectedDate.month}/${selectedDate.day}/${selectedDate.year}',
+                          hintStyle: const TextStyle(color: Colors.black),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          suffixIcon: const Icon(Icons.calendar_today),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                        onTap: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
+                          );
+                          if (picked != null) {
+                            setDialogState(() {
+                              selectedDate = picked;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.grey[200],
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (selectedAccountId == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please select an account'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                if (nameController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter a transaction name'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                if (amountController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter an amount'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                try {
+                                  final amount = double.parse(amountController.text);
+                                  final negativeAmount = amount.abs() * -1;
+
+                                  await transactionService.createTransaction(
+                                    selectedAccountId!,
+                                    CreateTransactionData(
+                                      name: nameController.text,
+                                      amount: negativeAmount,
+                                      category: selectedCategory![0].toUpperCase() + selectedCategory!.substring(1),
+                                      type: 'expense',
+                                      date: selectedDate,
+                                    ),
+                                  );
+
+                                  Navigator.of(context).pop();
+                                  
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Transaction added successfully!'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+
+                                  await _loadTransactions();
+                                  await _loadAccounts();
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to add transaction: ${e.toString()}'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF695EE8),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Add Transaction',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleLogout() async {
-    // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -76,7 +492,6 @@ class _TransactionsPageState extends State<TransactionsPage> {
 
     if (confirmed == true && mounted) {
       try {
-        // call logout
         await userService.logout();
         
         if (mounted) {
@@ -86,7 +501,6 @@ class _TransactionsPageState extends State<TransactionsPage> {
           );
         }
       } catch (error) {
-        // Show error if logout fails
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -99,8 +513,68 @@ class _TransactionsPageState extends State<TransactionsPage> {
     }
   }
 
+  Future<void> _deleteTransaction(String accountId, String transactionId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Delete Transaction'),
+          content: const Text('Are you sure you want to delete this transaction?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      try {
+        await transactionService.deleteTransaction(accountId, transactionId);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Transaction deleted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        await _loadTransactions();
+        await _loadAccounts();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete transaction: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filteredTransactions = _getFilteredTransactions();
+
     return Scaffold(
       drawer: Drawer(
         child: Container(
@@ -230,7 +704,10 @@ class _TransactionsPageState extends State<TransactionsPage> {
                       height: 80,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(10),
+                          topRight: Radius.circular(10),
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -298,7 +775,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                   ),
                 ],
               ),
-              // Main content with fixed logout button
+              // Main content
               Expanded(
                 child: Stack(
                   children: [
@@ -308,6 +785,8 @@ class _TransactionsPageState extends State<TransactionsPage> {
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(1),
                           topRight: Radius.circular(1),
+                          bottomLeft: Radius.circular(10),
+                          bottomRight: Radius.circular(10)
                         ),
                       ),
                       child: SingleChildScrollView(
@@ -332,8 +811,14 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                 },
                                 onDaySelected: (selectedDay, focusedDay) {
                                   setState(() {
-                                    _selectedDay = selectedDay;
+                                    _selectedDay = isSameDay(_selectedDay, selectedDay) ? null : selectedDay;
                                     _focusedDay = focusedDay;
+                                  });
+                                },
+                                onPageChanged: (focusedDay) {
+                                  setState(() {
+                                    _focusedDay = focusedDay;
+                                    _selectedDay = null;
                                   });
                                 },
                                 calendarFormat: CalendarFormat.month,
@@ -376,16 +861,79 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+                                calendarBuilders: CalendarBuilders(
+                                  defaultBuilder: (context, day, focusedDay) {
+                                    final transactions = _getTransactionsForDate(day);
+                                    if (transactions.isNotEmpty) {
+                                      return Container(
+                                        margin: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[50],
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            '${day.day}',
+                                            style: const TextStyle(fontSize: 14),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Add Transaction Button
+                            Center(
+                              child: ElevatedButton.icon(
+                                onPressed: _showAddTransactionDialog,
+                                icon: const Icon(Icons.add),
+                                label: const Text('Add Transaction'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF695EE8),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 30),
                             // Recent transactions section
-                            const Text(
-                              'RECENT TRANSACTIONS',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  _selectedDay != null 
+                                    ? 'TRANSACTIONS ON ${_selectedDay!.month}/${_selectedDay!.day}/${_selectedDay!.year}'
+                                    : 'RECENT TRANSACTIONS',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (_selectedDay != null)
+                                  TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _selectedDay = null;
+                                      });
+                                    },
+                                    child: const Text(
+                                      'Show All',
+                                      style: TextStyle(
+                                        color: Color(0xFF695EE8),
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                             const SizedBox(height: 10),
                             Container(
@@ -433,6 +981,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(width: 40),
                                     ],
                                   ),
                                   const SizedBox(height: 10),
@@ -442,16 +991,54 @@ class _TransactionsPageState extends State<TransactionsPage> {
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: ListView(
-                                      padding: const EdgeInsets.all(12),
-                                      children: [
-                                        _buildTransactionRow('--', '---', '\$0.00'),
-                                        const Divider(height: 20),
-                                        _buildTransactionRow('--', '----', '\$0.00'),
-                                        const Divider(height: 20),
-                                        _buildTransactionRow('--', '--------', '\$0.00'),
-                                      ],
-                                    ),
+                                    child: _isLoading
+                                      ? const Center(
+                                          child: CircularProgressIndicator(
+                                            color: Color(0xFF695EE8),
+                                          ),
+                                        )
+                                      : filteredTransactions.isEmpty
+                                        ? Center(
+                                            child: Text(
+                                              _selectedDay != null
+                                                ? 'No transactions found for this date.'
+                                                : 'No transactions found for this month.',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          )
+                                        : ListView.separated(
+                                            padding: const EdgeInsets.all(12),
+                                            itemCount: filteredTransactions.length,
+                                            separatorBuilder: (context, index) => const Divider(height: 20),
+                                            itemBuilder: (context, index) {
+                                              final transaction = filteredTransactions[index];
+                                              final account = _accounts.firstWhere(
+                                                (a) => a.id == transaction.accountId,
+                                                orElse: () => Account(
+                                                  id: '',
+                                                  userId: '',
+                                                  accountName: 'Unknown',
+                                                  accountType: '',
+                                                  balance: 0,
+                                                  currency: 'USD',
+                                                  isActive: true,
+                                                  createdAt: '',
+                                                  updatedAt: '',
+                                                ),
+                                              );
+                                              
+                                              return _buildTransactionRow(
+                                                transaction.date,
+                                                transaction.name ?? 'Unknown',
+                                                '\${transaction.amount.abs().toStringAsFixed(2)}',
+                                                transaction.accountId ?? '',
+                                                transaction.id ?? '',
+                                              );
+                                            },
+                                          ),
                                   ),
                                 ],
                               ),
@@ -495,7 +1082,7 @@ class _TransactionsPageState extends State<TransactionsPage> {
     );
   }
 
-  Widget _buildTransactionRow(String date, String name, String amount) {
+  Widget _buildTransactionRow(String date, String name, String amount, String accountId, String transactionId) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -520,6 +1107,19 @@ class _TransactionsPageState extends State<TransactionsPage> {
               amount,
               textAlign: TextAlign.right,
               style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+              onPressed: () {
+                if (accountId.isNotEmpty && transactionId.isNotEmpty) {
+                  _deleteTransaction(accountId, transactionId);
+                }
+              },
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
             ),
           ),
         ],

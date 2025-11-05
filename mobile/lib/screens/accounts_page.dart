@@ -5,6 +5,7 @@ import './transactions_page.dart';
 import './analytics_page.dart';
 import '../services/auth_services.dart';
 import '../services/user_services.dart';
+import '../services/account_services.dart';
 import './login_page.dart';
 
 class AccountsPage extends StatefulWidget {
@@ -15,14 +16,16 @@ class AccountsPage extends StatefulWidget {
 }
 
 class _AccountsPageState extends State<AccountsPage> {
-
   User? _currentUser;
   bool _isLoading = true;
+  List<Account> _accounts = [];
+  double _totalBalance = 0.0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadAccounts();
   }
 
   Future<void> _loadUserData() async {
@@ -30,25 +33,410 @@ class _AccountsPageState extends State<AccountsPage> {
       final user = await authService.getCurrentUser();
       setState(() {
         _currentUser = user;
-        _isLoading = false;
       });
     } catch (e) {
       print('Error loading user data: $e');
+    }
+  }
+
+  Future<void> _loadAccounts() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final accounts = await accountService.getAccounts();
+      double total = 0.0;
+      for (var account in accounts) {
+        total += account.balance;
+      }
+
+      setState(() {
+        _accounts = accounts;
+        _totalBalance = total;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading accounts: $e');
       setState(() {
         _isLoading = false;
       });
     }
   }
 
-  // Sample account data 
-  final List<Map<String, dynamic>> accounts = [
-    {'accountNumber': 'XXXXXXXX', 'balance': 1204.45},
-    {'accountNumber': 'XXXXXXXX', 'balance': 13901.28},
-    {'accountNumber': 'XXXXXXXX', 'balance': 67.89},
-  ];
+  void _showAddAccountDialog() {
+    final accountNameController = TextEditingController();
+    final accountNumberController = TextEditingController();
+    final institutionController = TextEditingController();
+    final balanceController = TextEditingController();
+    String? selectedAccountType = 'Checking';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.9,
+                padding: const EdgeInsets.all(24),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Add New Account',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 28),
+                            onPressed: () => Navigator.of(context).pop(),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Account Name',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: accountNameController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., My Checking Account',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Account Type',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: selectedAccountType,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                        items: ['Checking', 'Savings', 'Credit Card', 'Investment', 'Other']
+                            .map((type) => DropdownMenuItem(
+                                  value: type,
+                                  child: Text(type),
+                                ))
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            selectedAccountType = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Account Number',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: accountNumberController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., 1234567890',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Financial Institution',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: institutionController,
+                        decoration: InputDecoration(
+                          hintText: 'e.g., Chase Bank, Wells Fargo',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Initial Balance',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: balanceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          hintStyle: TextStyle(color: Colors.grey[400]),
+                          filled: true,
+                          fillColor: Colors.grey[100],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Color(0xFF695EE8)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.grey[200],
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (accountNameController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter an account name'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                if (balanceController.text.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please enter an initial balance'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                try {
+                                  final balance = double.parse(balanceController.text);
+                                  final accountNumber = int.parse(accountNumberController.text);
+                                  await accountService.createAccount(
+                                    accountNameController.text,
+                                    selectedAccountType ?? 'Checking',
+                                    balance,
+                                    accountNumber,
+                                    institutionController.text,
+                                  );
+
+                                  Navigator.of(context).pop();
+
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Account added successfully!'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  }
+
+                                  await _loadAccounts();
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Failed to add account: ${e.toString()}'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF695EE8),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Add Account',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteAccount(String accountId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Delete Account'),
+          content: const Text('Are you sure you want to delete this account?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      try {
+        await accountService.deleteAccount(accountId);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account deleted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+
+        await _loadAccounts();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete account: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   Future<void> _handleLogout() async {
-    // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -80,9 +468,8 @@ class _AccountsPageState extends State<AccountsPage> {
 
     if (confirmed == true && mounted) {
       try {
-        // call logout
         await userService.logout();
-        
+
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -90,7 +477,6 @@ class _AccountsPageState extends State<AccountsPage> {
           );
         }
       } catch (error) {
-        // Show error if logout fails
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -101,6 +487,31 @@ class _AccountsPageState extends State<AccountsPage> {
         }
       }
     }
+  }
+
+  Color _getAccountTypeColor(String accountType) {
+    switch (accountType.toLowerCase()) {
+      case 'credit':
+      case 'credit card':
+        return Colors.orange.shade100;
+      case 'savings':
+        return Colors.yellow.shade100;
+      case 'checking':
+        return Colors.blue.shade100;
+      case 'investment':
+        return Colors.green.shade100;
+      default:
+        return Colors.grey.shade200;
+    }
+  }
+
+  String _getAccountTypeLabel(String accountType) {
+    return accountType.toUpperCase();
+  }
+
+  String _maskAccountNumber(String accountNumber) {
+    if (accountNumber.length <= 4) return accountNumber;
+    return '****${accountNumber.substring(accountNumber.length - 4)}';
   }
 
   @override
@@ -238,7 +649,10 @@ class _AccountsPageState extends State<AccountsPage> {
                       height: 80,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(10),
+                          topRight: Radius.circular(10),
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -269,16 +683,16 @@ class _AccountsPageState extends State<AccountsPage> {
                         Column(
                           children: [
                             Text(
-                              _isLoading 
-                                ? 'Hello!' 
-                                : 'Hello ${_currentUser?.firstName ?? 'User'}!',
-                              style: TextStyle(
+                              _isLoading
+                                  ? 'Hello!'
+                                  : 'Hello ${_currentUser?.firstName ?? 'User'}!',
+                              style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
                             ),
-                            Text(
+                            const Text(
                               'Accounts',
                               style: TextStyle(
                                 fontSize: 16,
@@ -306,9 +720,65 @@ class _AccountsPageState extends State<AccountsPage> {
                   ),
                 ],
               ),
+              // Stats Bar
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        Text(
+                          'TOTAL BALANCE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '\$${_totalBalance.toStringAsFixed(2)}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text(
+                          'Accounts',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                        Text(
+                          _accounts.length.toString(),
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[700],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
               // Main content
               Expanded(
-                child: Stack( 
+                child: Stack(
                   children: [
                     Container(
                       decoration: const BoxDecoration(
@@ -316,45 +786,79 @@ class _AccountsPageState extends State<AccountsPage> {
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(1),
                           topRight: Radius.circular(1),
+                          bottomLeft: Radius.circular(10),
+                          bottomRight: Radius.circular(10)
                         ),
                       ),
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 80), 
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'ACCOUNTS',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'My Accounts',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: _showAddAccountDialog,
+                                  icon: const Icon(Icons.add, size: 20),
+                                  label: const Text('Add Account'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF695EE8),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 20),
-                            // Grey container box with white account cards inside
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                border: Border.all(color: Colors.grey[400]!),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                children: accounts.asMap().entries.map((entry) {
-                                  int index = entry.key;
-                                  var account = entry.value;
-                                  bool isLast = index == accounts.length - 1;
-                                  
-                                  return Padding(
-                                    padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
-                                    child: _buildAccountCard(
-                                      account['accountNumber'],
-                                      account['balance'],
+                            _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF695EE8),
                                     ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
+                                  )
+                                : _accounts.isEmpty
+                                    ? Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(40.0),
+                                          child: Text(
+                                            'No accounts yet. Add your first account!',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey[600],
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      )
+                                    : GridView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 1,
+                                          childAspectRatio: 2.5,
+                                          crossAxisSpacing: 16,
+                                          mainAxisSpacing: 16,
+                                        ),
+                                        itemCount: _accounts.length,
+                                        itemBuilder: (context, index) {
+                                          final account = _accounts[index];
+                                          return _buildAccountCard(account);
+                                        },
+                                      ),
                           ],
                         ),
                       ),
@@ -393,31 +897,146 @@ class _AccountsPageState extends State<AccountsPage> {
     );
   }
 
-  Widget _buildAccountCard(String accountNumber, double balance) {
+  Widget _buildAccountCard(Account account) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[400]!, width: 1.5),
+        color: Colors.grey[50],
+        border: Border.all(color: Colors.grey[300]!, width: 1.5),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            accountNumber,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 2,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getAccountTypeColor(account.accountType),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      _getAccountTypeLabel(account.accountType),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    account.accountName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _deleteAccount(account.id),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ),
-          Text(
-            '\$${balance.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'ACCOUNT NUMBER',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _maskAccountNumber(account.accountNumber ?? 'N/A'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'BALANCE',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '\${account.balance.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          if (account.institution != null && account.institution!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text(
+                  'INSTITUTION',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  account.institution!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
+          ],
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text(
+                'STATUS',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[600],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Active',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
       ),

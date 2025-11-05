@@ -237,7 +237,10 @@ class _DashboardPageState extends State<DashboardPage> {
                       height: 80,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(3),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(10),
+                          topRight: Radius.circular(10),
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -316,6 +319,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(1),
                           topRight: Radius.circular(1),
+                          bottomLeft: Radius.circular(10),
+                          bottomRight: Radius.circular(10)
                         ),
                       ),
                       child: SingleChildScrollView(
