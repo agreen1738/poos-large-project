@@ -4,12 +4,18 @@ import accountService from '../services/accountService';
 import type { Account } from '../services/accountService';
 import './Accounts.css';
 
+interface Notification {
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 function Accounts() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [accountToDelete, setAccountToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [notification, setNotification] = useState<Notification | null>(null);
   
   // Form state - includes all 5 required fields
   const [formData, setFormData] = useState({
@@ -23,6 +29,20 @@ function Accounts() {
   useEffect(() => {
     fetchAccounts();
   }, []);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setNotification({ type, message });
+  };
 
   async function fetchAccounts() {
     setLoading(true);
@@ -69,8 +89,10 @@ function Accounts() {
         accountInstitution: '',
         balance: '0.00'
       });
+
+      showNotification('success', 'Account added successfully!');
     } catch (error: any) {
-      alert(error.message || 'Failed to add account');
+      showNotification('error', error.message || 'Failed to add account');
     }
   };
 
@@ -91,8 +113,10 @@ function Accounts() {
       // Close modal and reset
       setShowDeleteModal(false);
       setAccountToDelete(null);
+
+      showNotification('success', 'Account deleted successfully!');
     } catch (error: any) {
-      alert(error.message || 'Failed to delete account');
+      showNotification('error', error.message || 'Failed to delete account');
     }
   };
 
@@ -107,6 +131,71 @@ function Accounts() {
 
   return (
     <>
+      {/* Notification Toast */}
+      {notification && (
+        <div 
+          className={`notification-toast notification-${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '16px 24px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            zIndex: 9999,
+            minWidth: '300px',
+            maxWidth: '500px',
+            animation: 'slideIn 0.3s ease-out',
+            backgroundColor: notification.type === 'success' ? '#d4edda' : 
+                           notification.type === 'error' ? '#f8d7da' : '#d1ecf1',
+            color: notification.type === 'success' ? '#155724' : 
+                   notification.type === 'error' ? '#721c24' : '#0c5460',
+            border: `1px solid ${notification.type === 'success' ? '#c3e6cb' : 
+                                 notification.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '14px',
+            fontWeight: '500'
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {notification.type === 'success' && <span>✓</span>}
+            {notification.type === 'error' && <span>✗</span>}
+            {notification.type === 'info' && <span>ℹ</span>}
+            {notification.message}
+          </span>
+          <button 
+            onClick={() => setNotification(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              color: 'inherit',
+              padding: '0 0 0 16px',
+              opacity: 0.7
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Add CSS animation */}
+      <style>{`
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
+
       <div className="accounts-page">
         {/* Summary Section */}
         <div className="accounts-summary">
@@ -195,7 +284,7 @@ function Accounts() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Account</h2>
-              <button className="modal-close-btn" onClick={() => setShowModal(false)}>Ã—</button>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)}>×</button>
             </div>
             
             <form onSubmit={handleSubmit} className="account-form">

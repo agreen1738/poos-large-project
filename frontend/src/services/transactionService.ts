@@ -61,6 +61,7 @@ class TransactionService {
       // Backend expects: amount, category, type, date
       // The amount should already be negative from the frontend
       await api.post(`/transactions/${accountId}`, {
+        name: data.name,
         amount: data.amount,
         category: data.category,
         type: data.type,
