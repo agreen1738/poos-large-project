@@ -1,6 +1,7 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import './api_services.dart';
 
 class User {
   final String id;
@@ -93,39 +94,38 @@ class LoginCredentials {
 }
 
 class AuthService {
-
-  //static const String baseUrl = 'http://159.203.128.240:5050/api';
-  static const String baseUrl = 'http://10.0.2.2:5050/api';
+  final ApiService _apiService = apiService;
   
-  // register new user
+  // Register new user
   Future<void> register(RegisterData data) async {
     try {
       print('Sending registration request with data: ${data.toJson()}');
-      print('NUmber of fields: ${data.toJson().keys.length}');
+      print('Number of fields: ${data.toJson().keys.length}');
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(data.toJson()),
+      final response = await _apiService.post(
+        '/register',
+        data: data.toJson(),
       );
 
       print('Registration response status: ${response.statusCode}');
-      print('Registration response body: ${response.body}');
+      print('Registration response body: ${response.data}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // registration successful
         print('Registration successful');
         return;
       } else {
-        // Handle error
-        final errorData = jsonDecode(response.body);
+        final errorData = response.data;
         final errorMessage = errorData['error'] ?? 
                            errorData['message'] ?? 
                            'Registration failed';
         throw Exception(errorMessage);
       }
+    } on DioException catch (e) {
+      print('Registration error: $e');
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Registration failed';
+      throw Exception(errorMessage);
     } catch (error) {
       print('Registration error: $error');
       if (error is Exception) {
@@ -135,25 +135,22 @@ class AuthService {
     }
   }
 
-  // login user 
+  // Login user 
   Future<User> login(LoginCredentials credentials) async {
-    try{
-      print('Sending login request to: $baseUrl/login');
+    try {
+      print('Sending login request');
       print('Login payload: ${credentials.toJson()}');
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(credentials.toJson()),
+      final response = await _apiService.post(
+        '/login',
+        data: credentials.toJson(),
       );
 
       print('Login response status: ${response.statusCode}');
-      print('Login reponse body: ${response.body}');
+      print('Login response body: ${response.data}');
 
       if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
+        final responseData = response.data;
         final token = responseData['token'];
 
         if (token == null || token.isEmpty) {
@@ -186,7 +183,7 @@ class AuthService {
           return tempUser;
         }
       } else if (response.statusCode == 401) {
-        final errorData = jsonDecode(response.body);
+        final errorData = response.data;
         final errorMessage = errorData['error'] ?? '';
         
         // Check if it's an email verification error
@@ -196,12 +193,35 @@ class AuthService {
           throw Exception('Invalid email or password');
         }
       } else {
-        final errorData = jsonDecode(response.body);
+        final errorData = response.data;
         final errorMessage = errorData['error'] ?? 
                            errorData['message'] ?? 
                            'Login failed';
         throw Exception(errorMessage);
       }
+    } on DioException catch (e) {
+      print('Login DioException: $e');
+      
+      // Clear any stored data on error
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+      await prefs.remove('user_data');
+      
+      if (e.response?.statusCode == 401) {
+        final errorData = e.response?.data;
+        final errorMessage = errorData?['error'] ?? '';
+        
+        if (errorMessage.contains('not verified')) {
+          throw Exception('Please verify your email before logging in. Check your inbox for the verification link.');
+        } else {
+          throw Exception('Invalid email or password');
+        }
+      }
+      
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Login failed';
+      throw Exception(errorMessage);
     } catch (error) {
       print('Login error: $error');
       
@@ -225,24 +245,24 @@ class AuthService {
         throw Exception('No authentication token found');
       }
 
-      final response = await http.get(
-        Uri.parse('$baseUrl/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await _apiService.get('/me');
 
       if (response.statusCode == 200) {
-        final userData = jsonDecode(response.body);
+        final userData = response.data;
         return User.fromJson(userData);
       } else {
-        final errorData = jsonDecode(response.body);
+        final errorData = response.data;
         final errorMessage = errorData['error'] ?? 
                            errorData['message'] ?? 
                            'Failed to fetch user data';
         throw Exception(errorMessage);
       }
+    } on DioException catch (e) {
+      print('Get current user DioException: $e');
+      final errorMessage = e.response?.data['error'] ?? 
+                          e.response?.data['message'] ?? 
+                          'Failed to fetch user data';
+      throw Exception(errorMessage);
     } catch (error) {
       print('Get current user error: $error');
       if (error is Exception) {
