@@ -65,6 +65,7 @@ class CreateTransactionData {
   });
 
   Map<String, dynamic> toJson() {
+    // Backend expects exactly these 5 fields: name, amount, category, type, date
     return {
       'name': name,
       'amount': amount,
@@ -144,6 +145,7 @@ class TransactionService {
   }
 
   // Create a new transaction and update account balance
+  // Backend expects exactly 5 fields: name, amount, category, type, date
   Future<void> createTransaction(String accountId, CreateTransactionData data) async {
     try {
       final response = await _apiService.post(
@@ -155,6 +157,7 @@ class TransactionService {
         final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to create transaction');
       }
+      // Backend automatically updates the account balance
     } on DioException catch (e) {
       final errorMessage = e.response?.data['error'] ?? 
                           e.response?.data['message'] ?? 
@@ -174,6 +177,7 @@ class TransactionService {
         final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to delete transaction');
       }
+      // Backend automatically restores the account balance
     } on DioException catch (e) {
       final errorMessage = e.response?.data['error'] ?? 
                           e.response?.data['message'] ?? 
