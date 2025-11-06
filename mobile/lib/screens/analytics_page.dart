@@ -475,35 +475,46 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 ),
                               ),
                             
-                            // No data state
-                            if (!_isLoadingAnalytics && _error == null && _categoryData.isEmpty)
+                            // No data state 
+                            if (!_isLoadingAnalytics && _error == null && _totalSpending == 0.0)
                               Container(
                                 padding: const EdgeInsets.all(40),
-                                child: const Center(
+                                child: Center(
                                   child: Column(
                                     children: [
-                                      Icon(Icons.pie_chart_outline, size: 64, color: Colors.grey),
-                                      SizedBox(height: 16),
+                                      Icon(
+                                        Icons.pie_chart_outline, 
+                                        size: 64, 
+                                        color: Colors.grey[400],
+                                      ),
+                                      const SizedBox(height: 16),
                                       Text(
-                                        'No spending data available',
-                                        style: TextStyle(
+                                        _selectedAccountId == 'all'
+                                            ? 'No spending data available'
+                                            : 'No spending data available for the selected account.',
+                                        style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
                                         ),
+                                        textAlign: TextAlign.center,
                                       ),
-                                      SizedBox(height: 8),
+                                      const SizedBox(height: 8),
                                       Text(
                                         'Start adding transactions to see your spending breakdown!',
                                         textAlign: TextAlign.center,
-                                        style: TextStyle(color: Colors.grey),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
+                              )
                             
-                            // Data display
-                            if (!_isLoadingAnalytics && _error == null && _categoryData.isNotEmpty)
+                            // Data display 
+                            else if (!_isLoadingAnalytics && _error == null && _totalSpending > 0.0)
                               Container(
                                 padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(

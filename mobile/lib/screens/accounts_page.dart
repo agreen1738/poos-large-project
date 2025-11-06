@@ -587,7 +587,15 @@ class _AccountsPageState extends State<AccountsPage> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.settings_outlined),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsPage(),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -1052,7 +1060,7 @@ class _AccountsPageState extends State<AccountsPage> {
           ],
         ),
         
-        // Institution (if available)
+        // Institution 
         if (account.institution != null && account.institution!.isNotEmpty) ...[
           const SizedBox(height: 8),
           Row(
