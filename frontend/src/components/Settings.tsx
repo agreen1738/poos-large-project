@@ -4,18 +4,12 @@ import userService from '../services/userService';
 import authService from '../services/authService';
 import './Settings.css';
 
-interface Notification {
-  type: 'success' | 'error' | 'info';
-  message: string;
-}
-
 function Settings() {
   const [user, setUser] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
-  const [deleteError, setDeleteError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  const [notification, setNotification] = useState<Notification | null>(null);
+  const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
   const [settingsData, setSettingsData] = useState({
     firstName: '',
     lastName: '',
@@ -41,20 +35,6 @@ function Settings() {
     }
   }, []);
 
-  // Auto-dismiss notifications after 5 seconds
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => {
-        setNotification(null);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
-
-  const showNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    setNotification({ type, message });
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setSettingsData(prev => ({
@@ -70,7 +50,6 @@ function Settings() {
       await userService.updateUserInfo({
         firstName: settingsData.firstName,
         lastName: settingsData.lastName,
-        email: settingsData.email,
         phone: settingsData.phone
       });
       
@@ -79,15 +58,50 @@ function Settings() {
         ...user,
         firstName: settingsData.firstName,
         lastName: settingsData.lastName,
-        email: settingsData.email,
         phone: settingsData.phone
       };
       localStorage.setItem('user_data', JSON.stringify(updatedUser));
       setUser(updatedUser);
       
-      showNotification('success', 'Profile updated successfully!');
+      alert('Profile updated successfully!');
     } catch (error: any) {
-      showNotification('error', error.message || 'Failed to update profile');
+      alert('Failed to update profile: ' + error.message);
+    }
+  };
+
+  const handleEmailUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!settingsData.email) {
+      alert('Please enter an email address');
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(settingsData.email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+    
+    try {
+      await userService.updateUserInfo({
+        email: settingsData.email
+      });
+      
+      // Update local storage
+      const updatedUser = {
+        ...user,
+        email: settingsData.email
+      };
+      localStorage.setItem('user_data', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      setEmailUpdateMessage('Success! Check Email for Verification');
+      // Clear message after 5 seconds
+      setTimeout(() => setEmailUpdateMessage(''), 5000);
+    } catch (error: any) {
+      alert('Failed to update email: ' + error.message);
     }
   };
 
@@ -96,22 +110,22 @@ function Settings() {
     
     // Validation
     if (!settingsData.currentPassword) {
-      showNotification('error', 'Please enter your current password');
+      alert('Please enter your current password');
       return;
     }
 
     if (!settingsData.newPassword) {
-      showNotification('error', 'Please enter a new password');
+      alert('Please enter a new password');
       return;
     }
 
     if (settingsData.newPassword !== settingsData.confirmPassword) {
-      showNotification('error', 'New passwords do not match!');
+      alert('New passwords do not match!');
       return;
     }
 
     if (settingsData.newPassword.length < 6) {
-      showNotification('error', 'Password must be at least 6 characters long!');
+      alert('Password must be at least 6 characters long!');
       return;
     }
 
@@ -129,108 +143,46 @@ function Settings() {
         confirmPassword: ''
       }));
       
-      showNotification('success', 'Password changed successfully!');
+      alert('Password changed successfully!');
     } catch (error: any) {
-      showNotification('error', error.message || 'Failed to change password');
+      alert('Failed to change password: ' + error.message);
     }
   };
 
   const handleDeleteAccount = () => {
     setShowDeleteModal(true);
-    setDeleteError('');
-    setDeletePassword('');
   };
 
   const handleDeleteConfirm = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!deletePassword) {
-      setDeleteError('Please enter your password to confirm deletion.');
+      alert('Please enter your password to confirm deletion.');
       return;
     }
 
     setIsDeleting(true);
-    setDeleteError('');
 
     try {
       await userService.deleteAccount(deletePassword);
       
-      // Show success message before redirecting
-      showNotification('success', 'Account deleted successfully. Redirecting to login...');
+      alert('Account deleted successfully. You will be redirected to the login page.');
       
-      // Delay logout to show the message
-      setTimeout(() => {
-        authService.logout();
-      }, 2000);
+      // Clear all local storage and redirect
+      authService.logout();
     } catch (error: any) {
-      // If there's an error (like wrong password), show it and stay on the modal
-      const errorMessage = error.message || 'Failed to delete account';
-      setDeleteError(errorMessage);
+      alert('Failed to delete account: ' + error.message);
       setIsDeleting(false);
-      // Don't close the modal or logout - let the user try again or cancel
     }
   };
 
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
     setDeletePassword('');
-    setDeleteError('');
-    setIsDeleting(false);
   };
 
   return (
     <div className="settings-container">
-      {/* Notification Toast */}
-      {notification && (
-        <div 
-          className={`notification-toast notification-${notification.type}`}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            padding: '16px 24px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            zIndex: 9999,
-            minWidth: '300px',
-            maxWidth: '500px',
-            animation: 'slideIn 0.3s ease-out',
-            backgroundColor: notification.type === 'success' ? '#d4edda' : 
-                           notification.type === 'error' ? '#f8d7da' : '#d1ecf1',
-            color: notification.type === 'success' ? '#155724' : 
-                   notification.type === 'error' ? '#721c24' : '#0c5460',
-            border: `1px solid ${notification.type === 'success' ? '#c3e6cb' : 
-                                 notification.type === 'error' ? '#f5c6cb' : '#bee5eb'}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '14px',
-            fontWeight: '500'
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {notification.type === 'success' && <span>✓</span>}
-            {notification.type === 'error' && <span>✗</span>}
-            {notification.type === 'info' && <span>ℹ</span>}
-            {notification.message}
-          </span>
-          <button 
-            onClick={() => setNotification(null)}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '20px',
-              cursor: 'pointer',
-              color: 'inherit',
-              padding: '0 0 0 16px',
-              opacity: 0.7
-            }}
-          >
-            ×
-          </button>
-        </div>
-      )}
-
       <h2 className="settings-title">Settings</h2>
 
       {/* Profile Settings */}
@@ -262,17 +214,6 @@ function Settings() {
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={settingsData.email}
-              onChange={handleInputChange}
-              placeholder="Enter email address"
-            />
-          </div>
-          <div className="form-group">
             <label htmlFor="phone">Phone Number</label>
             <input
               type="tel"
@@ -284,6 +225,46 @@ function Settings() {
             />
           </div>
           <button type="submit" className="save-btn">Save Profile</button>
+        </form>
+      </div>
+
+      {/* Email Settings */}
+      <div className="settings-section">
+        <h3 className="section-title">Email Information</h3>
+        <p style={{ marginBottom: '1.5rem', color: '#6c757d', fontSize: '0.95rem' }}>
+          Update your email address. This will be used for account recovery and important notifications.
+        </p>
+        <form onSubmit={handleEmailUpdate} className="settings-form">
+          {emailUpdateMessage && (
+            <div style={{
+              padding: '12px 16px',
+              marginBottom: '1rem',
+              backgroundColor: '#d4edda',
+              color: '#155724',
+              border: '1px solid #c3e6cb',
+              borderRadius: '6px',
+              fontSize: '0.95rem',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span style={{ fontSize: '1.2rem' }}>✓</span>
+              {emailUpdateMessage}
+            </div>
+          )}
+          <div className="form-group">
+            <label htmlFor="email">Email Address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={settingsData.email}
+              onChange={handleInputChange}
+              placeholder="Enter email address"
+            />
+          </div>
+          <button type="submit" className="save-btn">Update Email</button>
         </form>
       </div>
 
@@ -352,11 +333,11 @@ function Settings() {
           <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Delete Account</h2>
-              <button className="modal-close-btn" onClick={handleDeleteCancel}>×</button>
+              <button className="modal-close-btn" onClick={handleDeleteCancel}>Ã—</button>
             </div>
             
             <div className="delete-warning">
-              <p>⚠️ <strong>Warning:</strong> This action cannot be undone!</p>
+              <p>âš ï¸ <strong>Warning:</strong> This action cannot be undone!</p>
               <p>All your data, including accounts, transactions, and settings will be permanently deleted.</p>
             </div>
 
@@ -373,19 +354,6 @@ function Settings() {
                   autoFocus
                   disabled={isDeleting}
                 />
-                {deleteError && (
-                  <div className="error-message" style={{ 
-                    color: '#dc3545', 
-                    fontSize: '0.875rem', 
-                    marginTop: '0.5rem',
-                    padding: '0.5rem',
-                    backgroundColor: '#f8d7da',
-                    borderRadius: '4px',
-                    border: '1px solid #f5c6cb'
-                  }}>
-                    {deleteError}
-                  </div>
-                )}
               </div>
 
               <div className="modal-actions">
@@ -409,20 +377,6 @@ function Settings() {
           </div>
         </div>
       )}
-
-      {/* Add CSS animation for toast */}
-      <style>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </div>
   );
 }
