@@ -12,14 +12,12 @@ This document serve as a guide towards succesfully running the backend.
 │   │   ├── accountController.ts
 │   │   ├── analyticsController.ts
 │   │   ├── authController.ts
-│   │   ├── budgetController.ts
 │   │   ├── transactionController.ts
 │   │   └── userController.ts
 │   ├── /middleware
 │   │   └── authMiddleware.ts
 │   ├── /models
 │   │   ├── Accounts.ts
-│   │   ├── Budget.ts
 │   │   ├── Transactions.ts
 │   │   └── User.ts
 │   ├── /routes
