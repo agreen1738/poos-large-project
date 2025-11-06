@@ -5,24 +5,24 @@ This document serve as a guide towards succesfully running the backend.
 ## Folder Structure
 
 ```
-├── /node_modules
 ├── /dist
+├── /node_modules
 ├── /src
 │   ├── /controllers
 │   │   ├── accountController.ts
+│   │   ├── analyticsController.ts
 │   │   ├── authController.ts
-│   │   ├── budgetController.ts
 │   │   ├── transactionController.ts
 │   │   └── userController.ts
 │   ├── /middleware
 │   │   └── authMiddleware.ts
 │   ├── /models
 │   │   ├── Accounts.ts
-│   │   ├── Budget.ts
 │   │   ├── Transactions.ts
 │   │   └── User.ts
 │   ├── /routes
 │   │   ├── accountRoutes.ts
+│   │   ├── analyticsRoutes.ts
 │   │   ├── authRoutes.ts
 │   │   ├── budgetRoutes.ts
 │   │   ├── transactionsRoutes.ts
@@ -36,14 +36,14 @@ This document serve as a guide towards succesfully running the backend.
 │   └── server.ts
 ├── /tests
 │   ├── accounts.test.ts
+│   ├── analytics.test.ts
 │   ├── auth.test.ts
 │   ├── budget.test.ts
-│   └── transactions.test.ts
+│   ├── transactions.test.ts
+│   └── user.test.ts
 ├── .env
-├── .env.deploy
 ├── .gitignore
 ├── .prettierrc
-├── deploy.sh
 ├── jest.config.js
 ├── package-lock.json
 ├── package.json
@@ -121,12 +121,6 @@ Building before pushing to production:
 
 ```bash
 npm run build
-```
-
-Pushing to production:
-
-```bash
-bash deploy.sh
 ```
 
 ## Example of API Interaction

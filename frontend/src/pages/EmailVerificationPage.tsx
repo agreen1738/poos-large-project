@@ -42,8 +42,23 @@ function EmailVerificationPage() {
           window.location.href = '/';
         }, 3000);
       } else {
-        setVerificationStatus('error');
-        setMessage(res.message || res.error || 'Verification failed. The link may have expired.');
+        // Check if the error message indicates the account is already verified
+        const errorMessage = res.message || res.error || '';
+        const isAlreadyVerified = errorMessage.toLowerCase().includes('already verified') || 
+                                   errorMessage.toLowerCase().includes('account already verified');
+        
+        if (isAlreadyVerified) {
+          // Treat "already verified" as a success case
+          setVerificationStatus('success');
+          setMessage('Your account is already verified! You can log in now.');
+          
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 3000);
+        } else {
+          setVerificationStatus('error');
+          setMessage(errorMessage || 'Verification failed. The link may have expired.');
+        }
       }
     } catch (error) {
       console.error('Verification error:', error);
@@ -94,7 +109,9 @@ function EmailVerificationPage() {
       <div className="email-verification-container">
         {verificationStatus === 'verifying' && (
           <>
-            <div className="verification-icon verifying">⏳</div>
+            <div className="verification-icon verifying">
+              <img src="/images/hourglass.png" alt="Verifying" />
+            </div>
             <h1>Verifying Your Email</h1>
             <p className="subtitle">Please wait while we verify your email address...</p>
             <div className="loading-spinner"></div>
@@ -131,7 +148,8 @@ function EmailVerificationPage() {
             {!showResendForm ? (
               <div className="action-buttons">
                 <button onClick={handleResendEmail} className="resend-btn">
-                  📧 Resend Verification Email
+                  <img src="/images/mail.png" alt="Email" style={{width: "16px", height: "16px", marginRight: "8px", verticalAlign: "middle"}} />
+                  Resend Verification Email
                 </button>
                 <a href="/" className="login-btn-secondary">Back to Login</a>
               </div>
