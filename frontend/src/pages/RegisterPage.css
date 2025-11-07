@@ -134,3 +134,15 @@
     padding: 30px 20px;
   }
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .register-page {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .register-form button[type="submit"] {
+  background: linear-gradient(135deg, #B8860B 0%, #DAA520 100%);
+}
+
+.golden-theme .register-form button[type="submit"]:hover {
+  box-shadow: 0 6px 20px rgba(218, 165, 32, 0.4);
+}

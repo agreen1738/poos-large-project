@@ -652,3 +652,23 @@
 .transactions-table-full th:nth-child(4) {
   text-align: right;
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .submit-btn {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .add-transaction-btn {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .submit-btn:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+
+.golden-theme .date-nav-btn {
+  color: #FFD700;
+}
+
+.golden-theme .calendar-day.selected {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}

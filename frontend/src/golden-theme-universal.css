@@ -1,0 +1,104 @@
+/* 
+ * UNIVERSAL GOLDEN THEME CSS
+ * Add this to your main CSS file or import it in App.tsx
+ * This ensures ALL purple gradients turn golden
+ */
+
+/* Body and Root */
+.golden-theme,
+.golden-theme body,
+body.golden-theme,
+.golden-theme #root {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}
+
+/* Page Containers */
+.golden-theme .dashboard-page,
+.golden-theme .dashboard-container,
+.golden-theme .login-page,
+.golden-theme .register-page,
+.golden-theme .settings-page,
+.golden-theme .analytics-page,
+.golden-theme .transactions-page,
+.golden-theme .accounts-page {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}
+
+/* Headers */
+.golden-theme header,
+.golden-theme .header,
+.golden-theme .app-header,
+.golden-theme .page-header,
+.golden-theme .top-header {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}
+
+/* Navigation */
+.golden-theme .nav-btn.active,
+.golden-theme .navigation .active {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+  color: white !important;
+}
+
+/* Buttons */
+.golden-theme .save-btn,
+.golden-theme .submit-btn,
+.golden-theme .add-account-btn,
+.golden-theme button[type="submit"],
+.golden-theme .primary-btn {
+  background: linear-gradient(135deg, #B8860B 0%, #DAA520 100%) !important;
+}
+
+.golden-theme .save-btn:hover,
+.golden-theme .submit-btn:hover,
+.golden-theme .add-account-btn:hover,
+.golden-theme button[type="submit"]:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4) !important;
+}
+
+/* Analytics & Display Elements */
+.golden-theme .total-spending {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}
+
+/* Form Elements */
+.golden-theme .account-selector select:hover,
+.golden-theme .account-selector select:focus,
+.golden-theme input:focus,
+.golden-theme select:focus {
+  border-color: #FFD700 !important;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1) !important;
+}
+
+/* Calendar Elements */
+.golden-theme .date-nav-btn {
+  color: #FFD700 !important;
+}
+
+.golden-theme .calendar-day.selected {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}
+
+/* Auth Pages */
+.golden-theme .login-form button[type="submit"],
+.golden-theme .register-form button[type="submit"],
+.golden-theme .forgot-password-form button[type="submit"],
+.golden-theme .reset-password-form button[type="submit"],
+.golden-theme .verify-form button[type="submit"],
+.golden-theme .resend-form button[type="submit"] {
+  background: linear-gradient(135deg, #B8860B 0%, #DAA520 100%) !important;
+}
+
+.golden-theme .login-form button[type="submit"]:hover,
+.golden-theme .register-form button[type="submit"]:hover {
+  box-shadow: 0 6px 20px rgba(218, 165, 32, 0.4) !important;
+}
+
+/* Catch-all for any gradient */
+.golden-theme [style*="linear-gradient(135deg, #667eea"] {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}
+
+.golden-theme [style*="linear-gradient(135deg, #764ba2"] {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+}

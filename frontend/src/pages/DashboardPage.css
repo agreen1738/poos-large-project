@@ -9,3 +9,7 @@
   flex: 1;
   padding: 20px;
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .dashboard-page {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}

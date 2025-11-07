@@ -1,6 +1,7 @@
 // App.tsx - Main routing component
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import './App.css';
+import './golden-theme-universal.css';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import NotFound from './pages/NotFound';

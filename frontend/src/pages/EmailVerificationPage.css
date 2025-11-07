@@ -284,3 +284,15 @@
     height: 80px;
   }
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .email-verification-page {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .verify-form button {
+  background: linear-gradient(135deg, #B8860B 0%, #DAA520 100%);
+}
+
+.golden-theme .verify-form button:hover {
+  box-shadow: 0 6px 20px rgba(218, 165, 32, 0.4);
+}
