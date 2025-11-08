@@ -143,13 +143,13 @@ class _DashboardPageState extends State<DashboardPage> {
   // Get transactions for the selected date
   List<Transaction> _getTransactionsForSelectedDate() {
     if (_selectedDay == null) return [];
-    
+
     return _transactions.where((transaction) {
       try {
         final transactionDate = DateTime.parse(transaction.date);
         return transactionDate.year == _selectedDay!.year &&
-               transactionDate.month == _selectedDay!.month &&
-               transactionDate.day == _selectedDay!.day;
+            transactionDate.month == _selectedDay!.month &&
+            transactionDate.day == _selectedDay!.day;
       } catch (e) {
         return false;
       }
@@ -162,8 +162,8 @@ class _DashboardPageState extends State<DashboardPage> {
       try {
         final transactionDate = DateTime.parse(transaction.date);
         return transactionDate.year == day.year &&
-               transactionDate.month == day.month &&
-               transactionDate.day == day.day;
+            transactionDate.month == day.month &&
+            transactionDate.day == day.day;
       } catch (e) {
         return false;
       }
@@ -254,10 +254,193 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  void _showProfileDialog() async {
+    try {
+      // Load fresh data
+      final user = await authService.getCurrentUser();
+      final accounts = await accountService.getAccounts();
+
+      final totalBalance = accounts.fold<double>(
+        0,
+        (sum, account) => sum + account.balance,
+      );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 28,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // User Information
+                    _buildProfileField(
+                      'First Name',
+                      user?.firstName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Last Name',
+                      user?.lastName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Email',
+                      user?.email ?? 'N/A',
+                      Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Phone Number',
+                      user?.phone ?? 'N/A',
+                      Icons.phone_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    // Account Summary
+                    _buildProfileField(
+                      'Number of Accounts',
+                      '${accounts.length}',
+                      Icons.account_balance_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Total Balance',
+                      '\$${totalBalance.toStringAsFixed(2)}',
+                      Icons.account_balance_wallet_outlined,
+                      valueColor: totalBalance >= 0 ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(height: 24),
+                    // Close Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF695EE8),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load profile: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildProfileField(
+    String label,
+    String value,
+    IconData icon, {
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF695EE8), size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: valueColor ?? Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedDateTransactions = _getTransactionsForSelectedDate();
-    
+
     return Scaffold(
       drawer: Drawer(
         child: Container(
@@ -280,7 +463,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const Text(
                         'Wealth Tracker',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -396,11 +579,11 @@ class _DashboardPageState extends State<DashboardPage> {
               Stack(
                 children: [
                   Positioned(
-                    top: 10,
+                    top: 0,
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 80,
+                      height: 105,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
@@ -457,17 +640,20 @@ class _DashboardPageState extends State<DashboardPage> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Colors.black,
+                        GestureDetector(
+                          onTap: () => _showProfileDialog(),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              size: 30,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ],
@@ -512,7 +698,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 5),
                                       Container(
                                         height: 362,
                                         decoration: BoxDecoration(
@@ -621,7 +807,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                       const Text(
                                         'MONTHLY BREAKDOWN',
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -640,7 +826,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                         child: Column(
                                           children: [
                                             Container(
-                                              height: 250,
+                                              height: 200,
                                               padding: const EdgeInsets.all(16),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
@@ -677,7 +863,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                             ),
                                             const SizedBox(height: 16),
                                             Container(
-                                              padding: const EdgeInsets.all(12),
+                                              height: 120,
+                                              padding: const EdgeInsets.all(4),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 border: Border.all(
@@ -697,13 +884,21 @@ class _DashboardPageState extends State<DashboardPage> {
                                                         'Savings ',
                                                         const Color(0xFFFFC842),
                                                       ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 7),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceAround,
+                                                    children: [
                                                       _buildLegendItem(
                                                         'Hobbies',
                                                         const Color(0xFFFF9F5A),
                                                       ),
                                                     ],
                                                   ),
-                                                  const SizedBox(height: 8),
+                                                  const SizedBox(height: 7),
                                                   Row(
                                                     mainAxisAlignment:
                                                         MainAxisAlignment
@@ -713,6 +908,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                                         'Living ',
                                                         const Color(0xFF5DA5DA),
                                                       ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 7),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceAround,
+                                                    children: [
                                                       _buildLegendItem(
                                                         'Gambling',
                                                         const Color(0xFFB5B5B5),
@@ -805,12 +1008,16 @@ class _DashboardPageState extends State<DashboardPage> {
                                         ),
                                         calendarBuilders: CalendarBuilders(
                                           defaultBuilder: (context, day, focusedDay) {
-                                            final count = _getTransactionCountForDate(day);
+                                            final count =
+                                                _getTransactionCountForDate(
+                                                  day,
+                                                );
                                             if (count > 0) {
                                               return Stack(
                                                 children: [
                                                   Container(
-                                                    margin: const EdgeInsets.all(4),
+                                                    margin:
+                                                        const EdgeInsets.all(4),
                                                     decoration: BoxDecoration(
                                                       color: Colors.blue[50],
                                                       shape: BoxShape.circle,
@@ -825,33 +1032,40 @@ class _DashboardPageState extends State<DashboardPage> {
                                                     ),
                                                   ),
                                                   Positioned(
-                                                    bottom: 0,
-                                                    left: 0,
-                                                    right: 0,
-                                                    child: Center(
-                                                      child: Container(
-                                                        padding: const EdgeInsets.all(4),
-                                                        decoration: BoxDecoration(
-                                                          color: const Color(0xFF695EE8),
-                                                          shape: BoxShape.circle,
-                                                          border: Border.all(
-                                                            color: Colors.white,
-                                                            width: 1,
+                                                    right: 2,
+                                                    top: 2,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4,
                                                           ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                          0xFF695EE8,
                                                         ),
-                                                        constraints: const BoxConstraints(
-                                                          minWidth: 18,
-                                                          minHeight: 18,
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 1,
                                                         ),
-                                                        child: Center(
-                                                          child: Text(
-                                                            '$count',
-                                                            style: const TextStyle(
-                                                              color: Colors.white,
-                                                              fontSize: 8,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
+                                                      ),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            minWidth: 18,
+                                                            minHeight: 18,
                                                           ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          '$count',
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 8,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                         ),
                                                       ),
                                                     ),
@@ -862,50 +1076,62 @@ class _DashboardPageState extends State<DashboardPage> {
                                             return null;
                                           },
                                           outsideBuilder: (context, day, focusedDay) {
-                                            final count = _getTransactionCountForDate(day);
+                                            final count =
+                                                _getTransactionCountForDate(
+                                                  day,
+                                                );
                                             if (count > 0) {
                                               return Stack(
                                                 children: [
                                                   Container(
-                                                    margin: const EdgeInsets.all(4),
+                                                    margin:
+                                                        const EdgeInsets.all(4),
                                                     child: Center(
                                                       child: Text(
                                                         '${day.day}',
                                                         style: TextStyle(
                                                           fontSize: 11,
-                                                          color: Colors.grey[400],
+                                                          color:
+                                                              Colors.grey[400],
                                                         ),
                                                       ),
                                                     ),
                                                   ),
                                                   Positioned(
-                                                    bottom: 0,
-                                                    left: 0,
-                                                    right: 0,
-                                                    child: Center(
-                                                      child: Container(
-                                                        padding: const EdgeInsets.all(4),
-                                                        decoration: BoxDecoration(
-                                                          color: const Color(0xFF695EE8).withOpacity(0.5),
-                                                          shape: BoxShape.circle,
-                                                          border: Border.all(
-                                                            color: Colors.white,
-                                                            width: 1,
+                                                    right: 2,
+                                                    top: 2,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4,
                                                           ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                          0xFF695EE8,
+                                                        ).withOpacity(0.5),
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 1,
                                                         ),
-                                                        constraints: const BoxConstraints(
-                                                          minWidth: 18,
-                                                          minHeight: 18,
-                                                        ),
-                                                        child: Center(
-                                                          child: Text(
-                                                            '$count',
-                                                            style: const TextStyle(
-                                                              color: Colors.white,
-                                                              fontSize: 8,
-                                                              fontWeight: FontWeight.bold,
-                                                            ),
+                                                      ),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            minWidth: 18,
+                                                            minHeight: 18,
                                                           ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          '$count',
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 8,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
                                                         ),
                                                       ),
                                                     ),
@@ -925,14 +1151,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: Padding(
                                       padding: const EdgeInsets.only(
                                         top: 16,
-                                        right: 16,
+                                        right: 7,
                                         bottom: 10,
                                       ),
                                       child: Align(
                                         alignment: Alignment.topLeft,
                                         child: Container(
                                           height: 315,
-                                          padding: const EdgeInsets.all(10),
+                                          padding: const EdgeInsets.all(5),
                                           decoration: BoxDecoration(
                                             color: Colors.white,
                                             border: Border.all(
@@ -943,12 +1169,13 @@ class _DashboardPageState extends State<DashboardPage> {
                                             ),
                                           ),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 'Transactions - ${_selectedDay != null ? _formatDate(_selectedDay!) : ""}',
                                                 style: const TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 11,
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -956,53 +1183,85 @@ class _DashboardPageState extends State<DashboardPage> {
                                               Expanded(
                                                 child: _isLoadingTransactions
                                                     ? const Center(
-                                                        child: CircularProgressIndicator(),
+                                                        child:
+                                                            CircularProgressIndicator(),
                                                       )
-                                                    : selectedDateTransactions.isEmpty
+                                                    : selectedDateTransactions
+                                                          .isEmpty
                                                     ? Center(
                                                         child: Text(
                                                           'No \ntransactions\n on this date',
                                                           style: TextStyle(
-                                                            fontSize: 13,
-                                                            color: Colors.grey[600],
+                                                            fontSize: 12,
+                                                            color: Colors
+                                                                .grey[600],
                                                           ),
-                                                          textAlign: TextAlign.center,
+                                                          textAlign:
+                                                              TextAlign.center,
                                                         ),
                                                       )
                                                     : ListView.builder(
-                                                        itemCount: selectedDateTransactions.length,
+                                                        itemCount:
+                                                            selectedDateTransactions
+                                                                .length,
                                                         itemBuilder: (context, index) {
-                                                          final transaction = selectedDateTransactions[index];
+                                                          final transaction =
+                                                              selectedDateTransactions[index];
                                                           return Container(
-                                                            margin: const EdgeInsets.only(bottom: 8),
-                                                            padding: const EdgeInsets.all(12),
+                                                            margin:
+                                                                const EdgeInsets.only(
+                                                                  bottom: 8,
+                                                                ),
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  12,
+                                                                ),
                                                             decoration: BoxDecoration(
-                                                              color: Colors.grey[100],
-                                                              borderRadius: BorderRadius.circular(8),
+                                                              color: Colors
+                                                                  .grey[100],
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
                                                               border: Border.all(
-                                                                color: Colors.grey[300]!,
+                                                                color: Colors
+                                                                    .grey[300]!,
                                                               ),
                                                             ),
                                                             child: Column(
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
                                                               children: [
                                                                 Text(
-                                                                  transaction.name ?? 'Unknown',
+                                                                  transaction
+                                                                          .name ??
+                                                                      'Unknown',
                                                                   style: const TextStyle(
-                                                                    fontSize: 11,
-                                                                    fontWeight: FontWeight.bold,
+                                                                    fontSize:
+                                                                        11,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
                                                                   ),
                                                                 ),
-                                                                const SizedBox(height: 4),
+                                                                const SizedBox(
+                                                                  height: 4,
+                                                                ),
                                                                 Row(
-                                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .spaceBetween,
                                                                   children: [
                                                                     Text(
                                                                       '\$${transaction.amount.abs().toStringAsFixed(2)}',
                                                                       style: TextStyle(
-                                                                        fontSize: 12,
-                                                                        color: Colors.purple,
-                                                                        fontWeight: FontWeight.w600,
+                                                                        fontSize:
+                                                                            12,
+                                                                        color: Colors
+                                                                            .purple,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
                                                                       ),
                                                                     ),
                                                                   ],
@@ -1068,6 +1327,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                         child: Text(
                                           'Amount',
                                           textAlign: TextAlign.right,
+                                          softWrap: false,
+                                          overflow: TextOverflow.visible,
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.black,

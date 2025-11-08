@@ -22,7 +22,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   bool _isLoading = true;
   bool _isLoadingAnalytics = true;
   String? _error;
-  
+
   List<Account> _accounts = [];
   String _selectedAccountId = 'all';
   List<CategoryData> _categoryData = [];
@@ -80,7 +80,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       final response = await analyticsService.getCategoryAnalytics(
         accountId: _selectedAccountId,
       );
-      
+
       setState(() {
         _categoryData = response.categories;
         _totalSpending = response.totalSpending;
@@ -109,16 +109,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Logout'),
             ),
           ],
@@ -129,7 +124,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (confirmed == true && mounted) {
       try {
         await userService.logout();
-        
+
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -171,6 +166,189 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }).toList();
   }
 
+  void _showProfileDialog() async {
+    try {
+      // Load fresh data
+      final user = await authService.getCurrentUser();
+      final accounts = await accountService.getAccounts();
+
+      final totalBalance = accounts.fold<double>(
+        0,
+        (sum, account) => sum + account.balance,
+      );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 28,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // User Information
+                    _buildProfileField(
+                      'First Name',
+                      user?.firstName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Last Name',
+                      user?.lastName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Email',
+                      user?.email ?? 'N/A',
+                      Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Phone Number',
+                      user?.phone ?? 'N/A',
+                      Icons.phone_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    // Account Summary
+                    _buildProfileField(
+                      'Number of Accounts',
+                      '${accounts.length}',
+                      Icons.account_balance_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Total Balance',
+                      '\$${totalBalance.toStringAsFixed(2)}',
+                      Icons.account_balance_wallet_outlined,
+                      valueColor: totalBalance >= 0 ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(height: 24),
+                    // Close Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF695EE8),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load profile: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildProfileField(
+    String label,
+    String value,
+    IconData icon, {
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF695EE8), size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: valueColor ?? Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -195,7 +373,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                       const Text(
                         'Wealth Tracker',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -207,7 +385,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.settings_outlined),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsPage(),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -299,11 +485,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               Stack(
                 children: [
                   Positioned(
-                    top: 10,
+                    top: 0,
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 80,
+                      height: 105,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: const BorderRadius.only(
@@ -340,9 +526,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         Column(
                           children: [
                             Text(
-                              _isLoading 
-                                ? 'Hello!' 
-                                : 'Hello ${_currentUser?.firstName ?? 'User'}!',
+                              _isLoading
+                                  ? 'Hello!'
+                                  : 'Hello ${_currentUser?.firstName ?? 'User'}!',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -359,17 +545,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Colors.black,
+                        GestureDetector(
+                          onTap: () => _showProfileDialog(),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              size: 30,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ],
@@ -388,7 +577,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           topLeft: Radius.circular(1),
                           topRight: Radius.circular(1),
                           bottomLeft: Radius.circular(10),
-                          bottomRight: Radius.circular(10)
+                          bottomRight: Radius.circular(10),
                         ),
                       ),
                       child: SingleChildScrollView(
@@ -402,17 +591,21 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 const Text(
                                   'Spending Analytics',
                                   style: TextStyle(
-                                    fontSize: 20,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 // Account selector dropdown
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.grey[200],
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey[400]!),
+                                    border: Border.all(
+                                      color: Colors.grey[400]!,
+                                    ),
                                   ),
                                   child: DropdownButton<String>(
                                     value: _selectedAccountId,
@@ -442,7 +635,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               ],
                             ),
                             const SizedBox(height: 20),
-                            
+
                             // Error state
                             if (_error != null)
                               Container(
@@ -459,13 +652,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                     Expanded(
                                       child: Text(
                                         _error!,
-                                        style: TextStyle(color: Colors.red[700]),
+                                        style: TextStyle(
+                                          color: Colors.red[700],
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            
+
                             // Loading state
                             if (_isLoadingAnalytics && _error == null)
                               const Center(
@@ -474,17 +669,19 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                   child: CircularProgressIndicator(),
                                 ),
                               ),
-                            
-                            // No data state 
-                            if (!_isLoadingAnalytics && _error == null && _totalSpending == 0.0)
+
+                            // No data state
+                            if (!_isLoadingAnalytics &&
+                                _error == null &&
+                                _totalSpending == 0.0)
                               Container(
                                 padding: const EdgeInsets.all(40),
                                 child: Center(
                                   child: Column(
                                     children: [
                                       Icon(
-                                        Icons.pie_chart_outline, 
-                                        size: 64, 
+                                        Icons.pie_chart_outline,
+                                        size: 64,
                                         color: Colors.grey[400],
                                       ),
                                       const SizedBox(height: 16),
@@ -512,9 +709,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                   ),
                                 ),
                               )
-                            
-                            // Data display 
-                            else if (!_isLoadingAnalytics && _error == null && _totalSpending > 0.0)
+                            // Data display
+                            else if (!_isLoadingAnalytics &&
+                                _error == null &&
+                                _totalSpending > 0.0)
                               Container(
                                 padding: const EdgeInsets.all(20),
                                 decoration: BoxDecoration(
@@ -549,11 +747,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        border: Border.all(color: Colors.grey[400]!),
+                                        border: Border.all(
+                                          color: Colors.grey[400]!,
+                                        ),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           const Text(
                                             'Total Spending:',
@@ -588,11 +789,16 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                         children: _categoryData
                                             .where((cat) => cat.value > 0)
                                             .map((category) {
-                                          return Padding(
-                                            padding: const EdgeInsets.only(bottom: 12.0),
-                                            child: _buildCategoryItem(category),
-                                          );
-                                        }).toList(),
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 12.0,
+                                                ),
+                                                child: _buildCategoryItem(
+                                                  category,
+                                                ),
+                                              );
+                                            })
+                                            .toList(),
                                       ),
                                     ),
                                   ],
@@ -620,10 +826,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                         ),
                         child: const Text(
                           'Logout',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: Colors.black, fontSize: 16),
                         ),
                       ),
                     ),
@@ -639,7 +842,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
   Widget _buildCategoryItem(CategoryData category) {
     final color = _categoryColors[category.name] ?? Colors.grey;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -668,10 +871,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
             Text(
               '\$${category.value.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -700,16 +900,17 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         const SizedBox(height: 4),
         Text(
           '${category.percentage.toStringAsFixed(1)}%',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
         ),
       ],
     );
   }
 
-  Widget _buildDrawerButton(String text, bool isSelected, {VoidCallback? onTap}) {
+  Widget _buildDrawerButton(
+    String text,
+    bool isSelected, {
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

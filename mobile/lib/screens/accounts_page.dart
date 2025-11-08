@@ -112,7 +112,7 @@ class _AccountsPageState extends State<AccountsPage> {
                           const Text(
                             'Add New Account',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 19,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -392,6 +392,7 @@ class _AccountsPageState extends State<AccountsPage> {
                               ),
                               child: const Text(
                                 'Add Account',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 18,
                                   color: Colors.white,
@@ -549,6 +550,189 @@ class _AccountsPageState extends State<AccountsPage> {
     return '****${accountNumber.substring(accountNumber.length - 4)}';
   }
 
+  void _showProfileDialog() async {
+    try {
+      // Load fresh data
+      final user = await authService.getCurrentUser();
+      final accounts = await accountService.getAccounts();
+
+      final totalBalance = accounts.fold<double>(
+        0,
+        (sum, account) => sum + account.balance,
+      );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 28,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // User Information
+                    _buildProfileField(
+                      'First Name',
+                      user?.firstName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Last Name',
+                      user?.lastName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Email',
+                      user?.email ?? 'N/A',
+                      Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Phone Number',
+                      user?.phone ?? 'N/A',
+                      Icons.phone_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    // Account Summary
+                    _buildProfileField(
+                      'Number of Accounts',
+                      '${accounts.length}',
+                      Icons.account_balance_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Total Balance',
+                      '\$${totalBalance.toStringAsFixed(2)}',
+                      Icons.account_balance_wallet_outlined,
+                      valueColor: totalBalance >= 0 ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(height: 24),
+                    // Close Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF695EE8),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load profile: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildProfileField(
+    String label,
+    String value,
+    IconData icon, {
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF695EE8), size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: valueColor ?? Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {    
     return Scaffold(
@@ -573,7 +757,7 @@ class _AccountsPageState extends State<AccountsPage> {
                       const Text(
                         'Wealth Tracker',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -685,11 +869,11 @@ class _AccountsPageState extends State<AccountsPage> {
               Stack(
                 children: [
                   Positioned(
-                    top: 10,
+                    top: 0,
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 80,
+                      height: 105,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
@@ -745,17 +929,20 @@ class _AccountsPageState extends State<AccountsPage> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Colors.black,
+                        GestureDetector(
+                          onTap: () => _showProfileDialog(),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              size: 30,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ],
@@ -847,7 +1034,7 @@ class _AccountsPageState extends State<AccountsPage> {
                                   const Text(
                                     'My Accounts',
                                     style: TextStyle(
-                                      fontSize: 24,
+                                      fontSize: 21,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
