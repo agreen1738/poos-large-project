@@ -80,6 +80,8 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       );
 
+    await authService.getCurrentUserFromAPI();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -118,6 +120,7 @@ class _SettingsPageState extends State<SettingsPage> {
           email: _emailController.text,
         ),
       );
+    await authService.getCurrentUserFromAPI();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
