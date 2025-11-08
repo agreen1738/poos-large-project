@@ -58,14 +58,6 @@ class _LoginPageState extends State<LoginPage> {
 
         // show success message
         if(mounted){
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome back, ${user.firstName}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            )
-          );
-
           // go to dashboard
           Navigator.pushReplacement(
             context, 

@@ -17,12 +17,13 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   User? _currentUser;
   bool _isLoading = true;
-  bool _isSaving = false;
+  bool _isSavingProfile = false;
+  bool _isSavingEmail = false;
 
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
 
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
@@ -67,7 +68,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _saveProfile() async {
     setState(() {
-      _isSaving = true;
+      _isSavingProfile = true;
     });
 
     try {
@@ -75,7 +76,6 @@ class _SettingsPageState extends State<SettingsPage> {
         UpdateUserData(
           firstName: _firstNameController.text,
           lastName: _lastNameController.text,
-          email: _emailController.text,
           phone: _phoneController.text,
         ),
       );
@@ -101,7 +101,46 @@ class _SettingsPageState extends State<SettingsPage> {
     } finally {
       if (mounted) {
         setState(() {
-          _isSaving = false;
+          _isSavingProfile = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _updateEmail() async {
+    setState(() {
+      _isSavingEmail = true;
+    });
+
+    try {
+      await userService.updateUserInfo(
+        UpdateUserData(
+          email: _emailController.text,
+        ),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadUserData(); 
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update email: ${error.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingEmail = false;
         });
       }
     }
@@ -740,30 +779,6 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ),
                                   const SizedBox(height: 16),
                                   const Text(
-                                    'Email Address',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _emailController,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: BorderSide(color: Colors.grey[300]!),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
                                     'Phone Number',
                                     style: TextStyle(
                                       fontSize: 16,
@@ -788,7 +803,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   ),
                                   const SizedBox(height: 24),
                                   ElevatedButton(
-                                    onPressed: _isSaving ? null : _saveProfile,
+                                    onPressed: _isSavingProfile ? null : _saveProfile,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF7B7FD9),
                                       foregroundColor: Colors.white,
@@ -800,7 +815,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
-                                    child: _isSaving
+                                    child: _isSavingProfile
                                         ? const SizedBox(
                                             height: 20,
                                             width: 20,
@@ -811,6 +826,92 @@ class _SettingsPageState extends State<SettingsPage> {
                                           )
                                         : const Text(
                                             'Save Profile',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Email Information Section
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Email Information',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Update your email address. This will be used for account recovery and important notifications.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  const Text(
+                                    'Email Address',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _emailController,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: Colors.grey[300]!),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide(color: Colors.grey[300]!),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  ElevatedButton(
+                                    onPressed: _isSavingEmail ? null : _updateEmail,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF7B7FD9),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 16,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                    child: _isSavingEmail
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Update Email',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,

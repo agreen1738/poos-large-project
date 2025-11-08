@@ -550,9 +550,7 @@ class _AccountsPageState extends State<AccountsPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    print('Building AccountsPage, accounts: ${_accounts.length}, loading: $_isLoading'); // Debug
-    
+  Widget build(BuildContext context) {    
     return Scaffold(
       drawer: Drawer(
         child: Container(
@@ -694,7 +692,10 @@ class _AccountsPageState extends State<AccountsPage> {
                       height: 80,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(10),
+                          topRight: Radius.circular(10),
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -764,11 +765,11 @@ class _AccountsPageState extends State<AccountsPage> {
               ),
               // Stats Bar
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                //margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 1),
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+                  //borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -778,7 +779,7 @@ class _AccountsPageState extends State<AccountsPage> {
                         Text(
                           'TOTAL BALANCE',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Colors.blue[700],
                           ),
@@ -799,7 +800,7 @@ class _AccountsPageState extends State<AccountsPage> {
                         Text(
                           'Accounts',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.blue[700],
                           ),
@@ -826,8 +827,8 @@ class _AccountsPageState extends State<AccountsPage> {
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(1),
-                          topRight: Radius.circular(1),
+                          //topLeft: Radius.circular(10),
+                          //topRight: Radius.circular(10),
                           bottomLeft: Radius.circular(10),
                           bottomRight: Radius.circular(10)
                         ),
