@@ -251,10 +251,10 @@ class AuthService {
         final userData = response.data;
         final user = User.fromJson(userData);
       
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_data', jsonEncode(user.toJson()));
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_data', jsonEncode(user.toJson()));
       
-      return user;
+        return user;
       } else {
         final errorData = response.data;
         final errorMessage = errorData['error'] ?? 
