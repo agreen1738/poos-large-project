@@ -186,7 +186,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     const Text(
                       'Forgot\nPassword',
                       style: TextStyle(
-                        fontSize: 48,
+                        fontSize: 38,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF2D2D2D),
                         height: 1.1,
@@ -197,9 +197,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
                     // Subtitle
                     const Text(
-                      'Enter your email address and we\'ll send you a\nlink to reset your password.',
+                      'Enter your email address and we\'ll send you a link to reset your password.',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Color(0xFF757575),
                         height: 1.4,
                       ),

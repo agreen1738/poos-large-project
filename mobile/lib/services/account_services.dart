@@ -8,7 +8,7 @@ class Account {
   final String accountType;
   final String? accountNumber;
   final String? institution;
-  final double balance; // Note: backend has typo "balanace"
+  final double balance;
   final String currency;
   final bool isActive;
   final String createdAt;
@@ -30,13 +30,13 @@ class Account {
 
   factory Account.fromJson(Map<String, dynamic> json) {
     return Account(
-      id: json['_id'],
-      userId: json['userId'],
-      accountName: json['accountName'],
-      accountType: json['accountType'],
+      id: json['_id'] ?? '',
+      userId: json['userId'] ?? '',
+      accountName: json['accountName'] ?? 'Unnamed Account',
+      accountType: json['accountType'] ?? 'Other',
       accountNumber: json['accountNumber']?.toString(),
       institution: json['accountInstitution'],
-      balance: (json['balanace'] as num).toDouble(), // Backend typo
+      balance: (json['balanace'] as num).toDouble(), // Backend typo when reading
       currency: json['currency'] ?? 'USD',
       isActive: json['isActive'] ?? true,
       createdAt: json['createdAt'] ?? '',
@@ -52,7 +52,7 @@ class Account {
       'accountType': accountType,
       if (accountNumber != null) 'accountNumber': accountNumber,
       if (institution != null) 'accountInstitution': institution,
-      'balanace': balance, // Backend typo
+      'balanace': balance,
       'currency': currency,
       'isActive': isActive,
       'createdAt': createdAt,
@@ -77,12 +77,13 @@ class CreateAccountData {
   });
 
   Map<String, dynamic> toJson() {
+    // Backend expects "balance" 
     return {
       'accountName': accountName,
       'accountType': accountType,
       'accountNumber': accountNumber,
       'accountInstitution': accountInstitution,
-      'balance': balance,
+      'balance': balance, // Correct spelling for creation
     };
   }
 }
@@ -106,7 +107,7 @@ class UpdateAccountData {
     final Map<String, dynamic> data = {};
     if (accountName != null) data['accountName'] = accountName;
     if (accountType != null) data['accountType'] = accountType;
-    if (balance != null) data['balanace'] = balance; 
+    if (balance != null) data['balanace'] = balance; // Typo for updates
     if (currency != null) data['currency'] = currency;
     if (isActive != null) data['isActive'] = isActive;
     return data;
@@ -164,7 +165,6 @@ class AccountService {
         final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to create account');
       }
-      // Backend returns success message, not the created account
     } on DioException catch (e) {
       final errorMessage = e.response?.data['error'] ?? 
                           e.response?.data['message'] ?? 
@@ -187,7 +187,6 @@ class AccountService {
         final errorData = response.data;
         throw Exception(errorData['error'] ?? errorData['message'] ?? 'Failed to update account');
       }
-      // Backend returns success message
     } on DioException catch (e) {
       final errorMessage = e.response?.data['error'] ?? 
                           e.response?.data['message'] ?? 

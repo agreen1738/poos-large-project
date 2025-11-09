@@ -8,6 +8,9 @@ import 'package:mobile/screens/settings_page.dart';
 import '../services/auth_services.dart';
 import './login_page.dart';
 import '../services/user_services.dart';
+import '../services/analytics_services.dart';
+import '../services/account_services.dart';
+import '../services/transaction_service.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -21,15 +24,34 @@ class _DashboardPageState extends State<DashboardPage> {
   DateTime? _selectedDay;
   User? _currentUser;
   bool _isLoading = true;
+  bool _isLoadingAnalytics = true;
+  bool _isLoadingAccounts = true;
+
+  List<CategoryData> _categoryData = [];
+  double _totalSpending = 0.0;
+  List<Account> _accounts = [];
+  List<Transaction> _transactions = [];
+  bool _isLoadingTransactions = true;
+
+  // Colors for each category
+  final Map<String, Color> _categoryColors = {
+    'Savings': const Color(0xFFFFC842),
+    'Living': const Color(0xFF5DA5DA),
+    'Hobbies': const Color(0xFFFF9F5A),
+    'Gambling': const Color(0xFFB5B5B5),
+  };
 
   @override
   void initState() {
     super.initState();
     _selectedDay = _focusedDay;
     _loadUserData();
+    _loadAnalyticsData();
+    _loadAccounts();
+    _loadTransactions();
   }
 
-  Future<void> _loadUserData() async{
+  Future<void> _loadUserData() async {
     try {
       final user = await authService.getCurrentUser();
       setState(() {
@@ -42,6 +64,143 @@ class _DashboardPageState extends State<DashboardPage> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadAnalyticsData() async {
+    setState(() {
+      _isLoadingAnalytics = true;
+    });
+
+    try {
+      final response = await analyticsService.getCategoryAnalytics(
+        accountId: 'all',
+      );
+
+      setState(() {
+        _categoryData = response.categories;
+        _totalSpending = response.totalSpending;
+        _isLoadingAnalytics = false;
+      });
+    } catch (e) {
+      setState(() {
+        _categoryData = [];
+        _totalSpending = 0.0;
+        _isLoadingAnalytics = false;
+      });
+    }
+  }
+
+  Future<void> _loadAccounts() async {
+    setState(() {
+      _isLoadingAccounts = true;
+    });
+
+    try {
+      final accounts = await accountService.getAccounts();
+      setState(() {
+        _accounts = accounts;
+        _isLoadingAccounts = false;
+      });
+    } catch (e) {
+      print('Error loading accounts: $e');
+      setState(() {
+        _accounts = [];
+        _isLoadingAccounts = false;
+      });
+    }
+  }
+
+  Future<void> _loadTransactions() async {
+    setState(() {
+      _isLoadingTransactions = true;
+    });
+
+    try {
+      final transactions = await transactionService.getTransactions();
+      transactions.sort((a, b) {
+        try {
+          final dateA = DateTime.parse(a.date);
+          final dateB = DateTime.parse(b.date);
+          return dateB.compareTo(dateA);
+        } catch (e) {
+          return 0;
+        }
+      });
+
+      setState(() {
+        _transactions = transactions;
+        _isLoadingTransactions = false;
+      });
+    } catch (e) {
+      print('Error loading transactions: $e');
+      setState(() {
+        _transactions = [];
+        _isLoadingTransactions = false;
+      });
+    }
+  }
+
+  // Get transactions for the selected date
+  List<Transaction> _getTransactionsForSelectedDate() {
+    if (_selectedDay == null) return [];
+
+    return _transactions.where((transaction) {
+      try {
+        final transactionDate = DateTime.parse(transaction.date);
+        return transactionDate.year == _selectedDay!.year &&
+            transactionDate.month == _selectedDay!.month &&
+            transactionDate.day == _selectedDay!.day;
+      } catch (e) {
+        return false;
+      }
+    }).toList();
+  }
+
+  // Get transaction count for a specific date
+  int _getTransactionCountForDate(DateTime day) {
+    return _transactions.where((transaction) {
+      try {
+        final transactionDate = DateTime.parse(transaction.date);
+        return transactionDate.year == day.year &&
+            transactionDate.month == day.month &&
+            transactionDate.day == day.day;
+      } catch (e) {
+        return false;
+      }
+    }).length;
+  }
+
+  String _maskAccountNumber(String? accountNumber) {
+    if (accountNumber == null || accountNumber.isEmpty) return 'N/A';
+    if (accountNumber.length <= 4) return accountNumber;
+    return '****${accountNumber.substring(accountNumber.length - 4)}';
+  }
+
+  List<PieChartSectionData> _buildPieChartSections() {
+    if (_categoryData.isEmpty) {
+      return [
+        PieChartSectionData(
+          color: Colors.grey[400]!,
+          value: 100,
+          title: '',
+          radius: 70,
+        ),
+      ];
+    }
+
+    return _categoryData.map((category) {
+      return PieChartSectionData(
+        color: _categoryColors[category.name] ?? Colors.grey,
+        value: category.value,
+        title: '',
+        radius: 70,
+      );
+    }).toList();
+  }
+
+  // Format date for display
+  String _formatDate(DateTime date) {
+    return '${date.month}/${date.day}/${date.year}';
   }
 
   Future<void> _handleLogout() async {
@@ -58,16 +217,11 @@ class _DashboardPageState extends State<DashboardPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Logout'),
             ),
           ],
@@ -79,7 +233,7 @@ class _DashboardPageState extends State<DashboardPage> {
       try {
         // call logout
         await userService.logout();
-        
+
         if (mounted) {
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -100,8 +254,193 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  void _showProfileDialog() async {
+    try {
+      // Load fresh data
+      final user = await authService.getCurrentUser();
+      final accounts = await accountService.getAccounts();
+
+      final totalBalance = accounts.fold<double>(
+        0,
+        (sum, account) => sum + account.balance,
+      );
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Profile',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 28,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // User Information
+                    _buildProfileField(
+                      'First Name',
+                      user?.firstName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Last Name',
+                      user?.lastName ?? 'N/A',
+                      Icons.person_outline,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Email',
+                      user?.email ?? 'N/A',
+                      Icons.email_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Phone Number',
+                      user?.phone ?? 'N/A',
+                      Icons.phone_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    // Account Summary
+                    _buildProfileField(
+                      'Number of Accounts',
+                      '${accounts.length}',
+                      Icons.account_balance_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildProfileField(
+                      'Total Balance',
+                      '\$${totalBalance.toStringAsFixed(2)}',
+                      Icons.account_balance_wallet_outlined,
+                      valueColor: totalBalance >= 0 ? Colors.green : Colors.red,
+                    ),
+                    const SizedBox(height: 24),
+                    // Close Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF695EE8),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load profile: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildProfileField(
+    String label,
+    String value,
+    IconData icon, {
+    Color? valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF695EE8), size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: valueColor ?? Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final selectedDateTransactions = _getTransactionsForSelectedDate();
+
     return Scaffold(
       drawer: Drawer(
         child: Container(
@@ -124,7 +463,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const Text(
                         'Wealth Tracker',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -136,7 +475,15 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.settings_outlined),
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.pop(context);
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsPage(),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -147,9 +494,7 @@ class _DashboardPageState extends State<DashboardPage> {
               const SizedBox(height: 1),
               Padding(
                 padding: const EdgeInsets.only(left: 20, top: 10, bottom: 5),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                ),
+                child: Align(alignment: Alignment.centerLeft),
               ),
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -158,25 +503,29 @@ class _DashboardPageState extends State<DashboardPage> {
                     _buildDrawerButton('Dashboard', true),
                     const SizedBox(height: 10),
                     _buildDrawerButton(
-                      'Transactions', 
+                      'Transactions',
                       false,
-                      onTap : () {
+                      onTap: () {
                         Navigator.pop(context);
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const TransactionsPage()),
+                          MaterialPageRoute(
+                            builder: (context) => const TransactionsPage(),
+                          ),
                         );
                       },
                     ),
                     const SizedBox(height: 10),
                     _buildDrawerButton(
-                      'Accounts', 
+                      'Accounts',
                       false,
-                      onTap : () {
+                      onTap: () {
                         Navigator.pop(context);
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => const AccountsPage()),
+                          MaterialPageRoute(
+                            builder: (context) => const AccountsPage(),
+                          ),
                         );
                       },
                     ),
@@ -230,11 +579,11 @@ class _DashboardPageState extends State<DashboardPage> {
               Stack(
                 children: [
                   Positioned(
-                    top: 10,
+                    top: 0,
                     left: 0,
                     right: 0,
                     child: Container(
-                      height: 80,
+                      height: 105,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.only(
@@ -272,9 +621,9 @@ class _DashboardPageState extends State<DashboardPage> {
                         Column(
                           children: [
                             Text(
-                              _isLoading 
-                                ? 'Hello!' 
-                                : 'Hello ${_currentUser?.firstName ?? 'User'}!',
+                              _isLoading
+                                  ? 'Hello!'
+                                  : 'Hello ${_currentUser?.firstName ?? 'User'}!',
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -291,17 +640,20 @@ class _DashboardPageState extends State<DashboardPage> {
                           ],
                         ),
                         const Spacer(),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 30,
-                            color: Colors.black,
+                        GestureDetector(
+                          onTap: () => _showProfileDialog(),
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              size: 30,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ],
@@ -309,7 +661,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   ),
                 ],
               ),
-              // Main content with fixed logout button
+              // Main content
               Expanded(
                 child: Stack(
                   children: [
@@ -320,7 +672,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           topLeft: Radius.circular(1),
                           topRight: Radius.circular(1),
                           bottomLeft: Radius.circular(10),
-                          bottomRight: Radius.circular(10)
+                          bottomRight: Radius.circular(10),
                         ),
                       ),
                       child: SingleChildScrollView(
@@ -336,7 +688,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                 SizedBox(
                                   width: 160,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'ACCOUNTS',
@@ -345,13 +698,100 @@ class _DashboardPageState extends State<DashboardPage> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 5),
                                       Container(
-                                        height: 300,
+                                        height: 362,
                                         decoration: BoxDecoration(
                                           color: Colors.grey[200],
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
+                                        child: _isLoadingAccounts
+                                            ? const Center(
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              )
+                                            : _accounts.isEmpty
+                                            ? Center(
+                                                child: Padding(
+                                                  padding: const EdgeInsets.all(
+                                                    16.0,
+                                                  ),
+                                                  child: Text(
+                                                    'No accounts yet',
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              )
+                                            : ListView.builder(
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
+                                                itemCount: _accounts.length,
+                                                itemBuilder: (context, index) {
+                                                  final account =
+                                                      _accounts[index];
+                                                  return Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          bottom: 8,
+                                                        ),
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                          12,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      border: Border.all(
+                                                        color:
+                                                            Colors.grey[300]!,
+                                                      ),
+                                                    ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          _maskAccountNumber(
+                                                            account
+                                                                .accountNumber,
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 4,
+                                                        ),
+                                                        Text(
+                                                          '\$${account.balance.toStringAsFixed(2)}',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 14,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
                                       ),
                                     ],
                                   ),
@@ -361,12 +801,13 @@ class _DashboardPageState extends State<DashboardPage> {
                                 Expanded(
                                   flex: 1,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'MONTHLY BREAKDOWN',
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -378,12 +819,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                           border: Border.all(
                                             color: Colors.grey[50]!,
                                           ),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Column(
                                           children: [
                                             Container(
-                                              height: 250,
+                                              height: 200,
                                               padding: const EdgeInsets.all(16),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
@@ -391,58 +834,44 @@ class _DashboardPageState extends State<DashboardPage> {
                                                   color: Colors.grey[400]!,
                                                 ),
                                               ),
-                                              child: PieChart(
-                                                PieChartData(
-                                                  sectionsSpace: 2,
-                                                  centerSpaceRadius: 0,
-                                                  sections: [
-                                                    PieChartSectionData(
-                                                      color: const Color(
-                                                        0xFF5DA5DA,
+                                              child: _isLoadingAnalytics
+                                                  ? const Center(
+                                                      child:
+                                                          CircularProgressIndicator(),
+                                                    )
+                                                  : _totalSpending == 0.0
+                                                  ? Center(
+                                                      child: Text(
+                                                        'No spending data available',
+                                                        style: TextStyle(
+                                                          fontSize: 14,
+                                                          color:
+                                                              Colors.grey[600],
+                                                        ),
+                                                        textAlign:
+                                                            TextAlign.center,
                                                       ),
-                                                      value: 35,
-                                                      title: '',
-                                                      radius: 70,
-                                                    ),
-                                                    PieChartSectionData(
-                                                      color: const Color(
-                                                        0xFFFF9F5A,
+                                                    )
+                                                  : PieChart(
+                                                      PieChartData(
+                                                        sectionsSpace: 2,
+                                                        centerSpaceRadius: 0,
+                                                        sections:
+                                                            _buildPieChartSections(),
                                                       ),
-                                                      value: 20,
-                                                      title: '',
-                                                      radius: 70,
                                                     ),
-                                                    PieChartSectionData(
-                                                      color: const Color(
-                                                        0xFFFFC842,
-                                                      ),
-                                                      value: 35,
-                                                      title: '',
-                                                      radius: 70,
-                                                    ),
-                                                    PieChartSectionData(
-                                                      color: const Color(
-                                                        0xFFB5B5B5,
-                                                      ),
-                                                      value: 10,
-                                                      title: '',
-                                                      radius: 70,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
                                             ),
                                             const SizedBox(height: 16),
                                             Container(
-                                              padding: const EdgeInsets.all(12),
+                                              height: 120,
+                                              padding: const EdgeInsets.all(4),
                                               decoration: BoxDecoration(
                                                 color: Colors.white,
                                                 border: Border.all(
                                                   color: Colors.grey[400]!,
                                                 ),
-                                                borderRadius: BorderRadius.circular(
-                                                  8,
-                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
                                               ),
                                               child: Column(
                                                 children: [
@@ -455,13 +884,21 @@ class _DashboardPageState extends State<DashboardPage> {
                                                         'Savings ',
                                                         const Color(0xFFFFC842),
                                                       ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 7),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceAround,
+                                                    children: [
                                                       _buildLegendItem(
                                                         'Hobbies',
                                                         const Color(0xFFFF9F5A),
                                                       ),
                                                     ],
                                                   ),
-                                                  const SizedBox(height: 8),
+                                                  const SizedBox(height: 7),
                                                   Row(
                                                     mainAxisAlignment:
                                                         MainAxisAlignment
@@ -471,6 +908,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                                         'Living ',
                                                         const Color(0xFF5DA5DA),
                                                       ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 7),
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceAround,
+                                                    children: [
                                                       _buildLegendItem(
                                                         'Gambling',
                                                         const Color(0xFFB5B5B5),
@@ -507,7 +952,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Calendar
+                                  // Calendar with transaction counts
                                   Expanded(
                                     flex: 2,
                                     child: Container(
@@ -519,12 +964,13 @@ class _DashboardPageState extends State<DashboardPage> {
                                         selectedDayPredicate: (day) {
                                           return isSameDay(_selectedDay, day);
                                         },
-                                        onDaySelected: (selectedDay, focusedDay) {
-                                          setState(() {
-                                            _selectedDay = selectedDay;
-                                            _focusedDay = focusedDay;
-                                          });
-                                        },
+                                        onDaySelected:
+                                            (selectedDay, focusedDay) {
+                                              setState(() {
+                                                _selectedDay = selectedDay;
+                                                _focusedDay = focusedDay;
+                                              });
+                                            },
                                         calendarFormat: CalendarFormat.month,
                                         headerStyle: const HeaderStyle(
                                           formatButtonVisible: false,
@@ -535,10 +981,11 @@ class _DashboardPageState extends State<DashboardPage> {
                                           ),
                                         ),
                                         calendarStyle: CalendarStyle(
-                                          selectedDecoration: const BoxDecoration(
-                                            color: Color(0xFF5DA5DA),
-                                            shape: BoxShape.circle,
-                                          ),
+                                          selectedDecoration:
+                                              const BoxDecoration(
+                                                color: Color(0xFF5DA5DA),
+                                                shape: BoxShape.circle,
+                                              ),
                                           selectedTextStyle: const TextStyle(
                                             color: Colors.white,
                                             fontSize: 16,
@@ -559,29 +1006,273 @@ class _DashboardPageState extends State<DashboardPage> {
                                           weekdayStyle: TextStyle(fontSize: 9),
                                           weekendStyle: TextStyle(fontSize: 9),
                                         ),
+                                        calendarBuilders: CalendarBuilders(
+                                          defaultBuilder: (context, day, focusedDay) {
+                                            final count =
+                                                _getTransactionCountForDate(
+                                                  day,
+                                                );
+                                            if (count > 0) {
+                                              return Stack(
+                                                children: [
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.all(4),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blue[50],
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Center(
+                                                      child: Text(
+                                                        '${day.day}',
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Positioned(
+                                                    right: 2,
+                                                    top: 2,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                          0xFF695EE8,
+                                                        ),
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            minWidth: 18,
+                                                            minHeight: 18,
+                                                          ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          '$count',
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 8,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            }
+                                            return null;
+                                          },
+                                          outsideBuilder: (context, day, focusedDay) {
+                                            final count =
+                                                _getTransactionCountForDate(
+                                                  day,
+                                                );
+                                            if (count > 0) {
+                                              return Stack(
+                                                children: [
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.all(4),
+                                                    child: Center(
+                                                      child: Text(
+                                                        '${day.day}',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          color:
+                                                              Colors.grey[400],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Positioned(
+                                                    right: 2,
+                                                    top: 2,
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                          0xFF695EE8,
+                                                        ).withOpacity(0.5),
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: Colors.white,
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            minWidth: 18,
+                                                            minHeight: 18,
+                                                          ),
+                                                      child: Center(
+                                                        child: Text(
+                                                          '$count',
+                                                          style:
+                                                              const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 8,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            }
+                                            return null;
+                                          },
+                                        ),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 15),
-                                  // Subscriptions list
+                                  // Transactions for selected date
                                   Expanded(
                                     child: Padding(
                                       padding: const EdgeInsets.only(
                                         top: 16,
-                                        right: 16,
+                                        right: 7,
                                         bottom: 10,
                                       ),
                                       child: Align(
                                         alignment: Alignment.topLeft,
                                         child: Container(
-                                          height: 300,
-                                          padding: const EdgeInsets.all(16),
+                                          height: 315,
+                                          padding: const EdgeInsets.all(5),
                                           decoration: BoxDecoration(
                                             color: Colors.white,
                                             border: Border.all(
                                               color: Colors.grey[300]!,
                                             ),
-                                            borderRadius: BorderRadius.circular(8),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Transactions - ${_selectedDay != null ? _formatDate(_selectedDay!) : ""}',
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 10),
+                                              Expanded(
+                                                child: _isLoadingTransactions
+                                                    ? const Center(
+                                                        child:
+                                                            CircularProgressIndicator(),
+                                                      )
+                                                    : selectedDateTransactions
+                                                          .isEmpty
+                                                    ? Center(
+                                                        child: Text(
+                                                          'No \ntransactions\n on this date',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                      )
+                                                    : ListView.builder(
+                                                        itemCount:
+                                                            selectedDateTransactions
+                                                                .length,
+                                                        itemBuilder: (context, index) {
+                                                          final transaction =
+                                                              selectedDateTransactions[index];
+                                                          return Container(
+                                                            margin:
+                                                                const EdgeInsets.only(
+                                                                  bottom: 8,
+                                                                ),
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  12,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color: Colors
+                                                                  .grey[100],
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    8,
+                                                                  ),
+                                                              border: Border.all(
+                                                                color: Colors
+                                                                    .grey[300]!,
+                                                              ),
+                                                            ),
+                                                            child: Column(
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Text(
+                                                                  transaction
+                                                                          .name ??
+                                                                      'Unknown',
+                                                                  style: const TextStyle(
+                                                                    fontSize:
+                                                                        11,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(
+                                                                  height: 4,
+                                                                ),
+                                                                Row(
+                                                                  mainAxisAlignment:
+                                                                      MainAxisAlignment
+                                                                          .spaceBetween,
+                                                                  children: [
+                                                                    Text(
+                                                                      '\$${transaction.amount.abs().toStringAsFixed(2)}',
+                                                                      style: TextStyle(
+                                                                        fontSize:
+                                                                            12,
+                                                                        color: Colors
+                                                                            .purple,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          );
+                                                        },
+                                                      ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
@@ -612,7 +1303,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                   Row(
                                     children: [
                                       const Expanded(
-                                        flex: 1,
+                                        flex: 2,
                                         child: Text(
                                           'Date',
                                           style: TextStyle(
@@ -636,6 +1327,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                         child: Text(
                                           'Amount',
                                           textAlign: TextAlign.right,
+                                          softWrap: false,
+                                          overflow: TextOverflow.visible,
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color: Colors.black,
@@ -651,6 +1344,40 @@ class _DashboardPageState extends State<DashboardPage> {
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
+                                    child: _isLoadingTransactions
+                                        ? const Center(
+                                            child: CircularProgressIndicator(),
+                                          )
+                                        : _transactions.isEmpty
+                                        ? Center(
+                                            child: Text(
+                                              'No transactions yet',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          )
+                                        : ListView.separated(
+                                            padding: const EdgeInsets.all(12),
+                                            itemCount: _transactions.length > 5
+                                                ? 5
+                                                : _transactions.length,
+                                            separatorBuilder:
+                                                (context, index) =>
+                                                    const Divider(height: 16),
+                                            itemBuilder: (context, index) {
+                                              final transaction =
+                                                  _transactions[index];
+                                              return _buildTransactionRow(
+                                                transaction.date,
+                                                transaction.name ?? 'Unknown',
+                                                transaction.amount
+                                                    .abs()
+                                                    .toStringAsFixed(2),
+                                              );
+                                            },
+                                          ),
                                   ),
                                 ],
                               ),
@@ -677,10 +1404,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         ),
                         child: const Text(
                           'Logout',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: Colors.black, fontSize: 16),
                         ),
                       ),
                     ),
@@ -708,7 +1432,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  Widget _buildDrawerButton(String text, bool isSelected, {VoidCallback? onTap}) {
+  Widget _buildDrawerButton(
+    String text,
+    bool isSelected, {
+    VoidCallback? onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -728,6 +1456,53 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionRow(String date, String name, String amount) {
+    String formattedDate = date;
+    try {
+      final parsedDate = DateTime.parse(date);
+      formattedDate =
+          '${parsedDate.month}/${parsedDate.day}/${parsedDate.year}';
+    } catch (e) {
+      print('Error parsing date: $e');
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 2,
+            child: Text(
+              formattedDate,
+              style: const TextStyle(fontSize: 12, color: Colors.black),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              name,
+              style: const TextStyle(fontSize: 12, color: Colors.black),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Expanded(
+            flex: 1,
+            child: Text(
+              '\$$amount',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'package:mobile/screens/forgotpassword_page.dart';
 import 'register_page.dart';
 import 'dashboard_page.dart';
 import '../services/auth_services.dart';
-
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -47,6 +46,7 @@ class _LoginPageState extends State<LoginPage> {
       });
 
       try{
+        // show success message
         // create login credentials
         final credentials = LoginCredentials(
           login: _loginController.text.trim(),
@@ -55,17 +55,7 @@ class _LoginPageState extends State<LoginPage> {
 
         // call login api
         final user = await authService.login(credentials);
-
-        // show success message
         if(mounted){
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Welcome back, ${user.firstName}!'),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            )
-          );
-
           // go to dashboard
           Navigator.pushReplacement(
             context, 
@@ -273,7 +263,7 @@ class _LoginPageState extends State<LoginPage> {
                           "Don't have an account? ",
                           style: TextStyle(
                             color: Color(0xFF757575),
-                            fontSize: 14,
+                            fontSize: 10,
                           ),
                         ),
                         TextButton(
@@ -296,7 +286,7 @@ class _LoginPageState extends State<LoginPage> {
                             'Create one here',
                             style: TextStyle(
                               color: Color(0xFF6E7BF2),
-                              fontSize: 14,
+                              fontSize: 9,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

@@ -10,7 +10,7 @@ class ApiService {
   late final Dio _dio;
   
   
-  static const String apiBaseUrl = 'http://10.0.2.2:5050/api';
+  static const String apiBaseUrl = 'http://10.0.48.191:5050/api';
   /*String.fromEnvironment(
     'API_URL',
     defaultValue: 'http://localhost:5050/api',
