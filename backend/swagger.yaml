@@ -377,7 +377,85 @@ paths:
                     description: Returned account spending analytics.
                 '500':
                     description: Internal server error.
-
+    /me:
+        get:
+            tags:
+                - users
+            summary: Gets user info except for id.
+            operationId: getInfo
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: User info retrieved successfully.
+                '400':
+                    description: Could not find user.
+                '500':
+                    description: Internal server error.
+        put:
+            tags:
+                - users
+            summary: Update user info except for id.
+            operationId: updateInfo
+            security:
+                - bearerAuth: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/updateInfo'
+            responses:
+                '200':
+                    description: User updated successfully.
+                '400':
+                    description: Could not find user or Missing required params.
+                '500':
+                    description: Internal server error.
+        delete:
+            tags:
+                - users
+            summary: Delete user.
+            operationId: deleteProfile
+            security:
+                - bearerAuth: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - password
+                            properties:
+                                password:
+                                    type: string
+                                    example: thisisapassword
+            responses:
+                '200':
+                    description: User deleted successfully.
+                '400':
+                    description: Could not find user or Missing required params.
+                '500':
+                    description: Internal server error.
+    /me/password:
+        post:
+            tags:
+                - users
+            summary: Update user password.
+            operationId: updatePassword
+            security:
+                - bearerAuth: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/updatePassword'
+            responses:
+                '200':
+                    description: Password updated successfully.
+                '400':
+                    description: Could not find user or Missing required params.
+                '500':
+                    description: Internal server error.
 components:
     securitySchemes:
         bearerAuth:
@@ -519,6 +597,34 @@ components:
                 date:
                     type: string
                     example: '12/16/2026'
+        updateInfo:
+            type: object
+            properties:
+                firstName:
+                    type: string
+                    example: Gradi
+                lastName:
+                    type: string
+                    example: Mbuyi
+                email:
+                    type: string
+                    example: gradimbuyi@outlook.com
+                phone:
+                    type: string
+                    example: 555-555-5555
+        updatePassword:
+            type: object
+            required:
+                - currentPassword
+                - newPassword
+            properties:
+                currentPassword:
+                    type: string
+                    example: thisisapassword
+                newPassword:
+                    type: string
+                    example: thisisalsoapassword
+
 servers:
     - url: http://wealthtrackit.tech/api
       description: Production server
