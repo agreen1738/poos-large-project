@@ -1,0 +1,111 @@
+swagger: '2.0'
+info:
+    description: API documentation of WealthTracker.
+    version: 1.0.0
+    title: Swagger Petstore
+    contact:
+        email: gradimbuyi@outlook.com
+
+    license:
+        name: MIT
+        url: https://opensource.org/license/mit
+tags:
+    - name: users
+      description: operations available to regular users
+
+paths:
+    /register:
+        post:
+            tags:
+                - users
+            summary: creates new user
+            operationId: register
+            consumes:
+                - application/json
+            produces:
+                - application/json
+            parameters:
+                - in: body
+                  name: register
+                  description: |
+                      takes for input user's name, email, and password, then register user.
+                  schema:
+                      $ref: '#/definitions/register'
+            responses:
+                200:
+                    description: user registered successfully
+                400:
+                    description: fail to access database
+                500:
+                    description: internal server error
+    /login:
+        post:
+            tags:
+                - users
+            summary: logs in to existing account
+            operationId: login
+            consumes:
+                - application/json
+            produces:
+                - application/json
+            parameters:
+                - in: body
+                  name: login
+                  description: |
+                      logs in to user account if email and password credentials is valid.
+                  schema:
+                      $ref: '#/definitions/login'
+            responses:
+                200:
+                    description: returns user token for authentication
+                400:
+                    description: could not retrieve user info
+                500:
+                    description: internal server error
+
+definitions:
+    register:
+        type: object
+        required:
+            - firstName
+            - lastName
+            - phone
+            - email
+            - password
+            - confirmPassword
+        properties:
+            firstName:
+                type: string
+                example: David
+            lastName:
+                type: string
+                example: Smith
+            phone:
+                type: string
+                example: 555-555-5555
+            email:
+                type: string
+                example: dsmith@gmail.com
+            password:
+                type: string
+                example: thisisapassword
+            confirmPassword:
+                type: string
+                example: thisisapassword
+    login:
+        type: object
+        required:
+            - email
+            - password
+        properties:
+            email:
+                type: string
+                example: gradimbuyi@outlook.com
+            password:
+                type: string
+                example: test123
+
+host: virtserver.swaggerhub.com
+basePath: /grady-4ce/WealthTracker/1.0.0
+schemes:
+    - https
