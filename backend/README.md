@@ -24,7 +24,6 @@ This document serve as a guide towards succesfully running the backend.
 │   │   ├── accountRoutes.ts
 │   │   ├── analyticsRoutes.ts
 │   │   ├── authRoutes.ts
-│   │   ├── budgetRoutes.ts
 │   │   ├── transactionsRoutes.ts
 │   │   └── userRoutes.ts
 │   ├── /types
@@ -38,7 +37,6 @@ This document serve as a guide towards succesfully running the backend.
 │   ├── accounts.test.ts
 │   ├── analytics.test.ts
 │   ├── auth.test.ts
-│   ├── budget.test.ts
 │   ├── transactions.test.ts
 │   └── user.test.ts
 ├── .env
