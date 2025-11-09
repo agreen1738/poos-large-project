@@ -31,3 +31,17 @@ dist-ssr/
 *.sw?
 private
 .env.deploy
+
+# Test coverage and results
+coverage/
+frontend/coverage/
+*.lcov
+test-results/
+frontend/test-results/
+playwright-report/
+frontend/playwright-report/
+.playwright/
+frontend/.playwright/
+
+# Test screenshots (optional - you might want to commit these)
+# frontend/test-results/screenshots/
