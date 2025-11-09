@@ -167,7 +167,7 @@ paths:
                 '500':
                     description: Internal server error.
 
-    /account{id}:
+    /account/{id}:
         get:
             tags:
                 - users
@@ -216,7 +216,7 @@ paths:
         delete:
             tags:
                 - users
-            summary: Delete specific account associated logged in User.
+            summary: Delete specific account associated with logged in User.
             operationId: deleteAccount
             security:
                 - bearerAuth: []
@@ -234,6 +234,125 @@ paths:
                     description: Failed to delete account. Error in request body format.
                 '500':
                     description: Internal server error.
+    /transactions:
+        get:
+            tags:
+                - users
+            summary: Gets all transactions associated with logged in User.
+            operationId: getTransactions
+            security:
+                - bearerAuth: []
+            responses:
+                '200':
+                    description: Transactions retrieved successfully.
+                '400':
+                    description: Missing Params. Could not reach api endpoint.
+                '500':
+                    description: Internal server error.
+    /transactions/{accountId}:
+        get:
+            tags:
+                - users
+            summary: Get all transaction associated with logged in User and selected account.
+            operationId: getAccountTransactions
+            security:
+                - bearerAuth: []
+            parameters:
+                - in: path
+                  name: accountId
+                  required: true
+                  description: Selected account id.
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Account transactions retrieved successfully.
+                '400':
+                    description: Missing Params. Could not reach api endpoint.
+                '500':
+                    description: Internal server error.
+        post:
+            tags:
+                - users
+            summary: Add a transaction to the selected account.
+            operationId: addTransaction
+            security:
+                - bearerAuth: []
+            parameters:
+                - in: path
+                  name: accountId
+                  required: true
+                  description: Selected account id.
+                  schema:
+                      type: string
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/addTransaction'
+            responses:
+                '200':
+                    description: Account transactions added successfully.
+                '400':
+                    description: Failed to add transaction. Invalid request format.
+                '500':
+                    description: Internal server error.
+    /transactions/{accountId}/{id}:
+        get:
+            tags:
+                - users
+            summary: Get specific transaction associated with logged in User and selected account.
+            operationId: getAccountTransaction
+            security:
+                - bearerAuth: []
+            parameters:
+                - in: path
+                  name: accountId
+                  required: true
+                  description: Selected account id.
+                  schema:
+                      type: string
+                - in: path
+                  name: id
+                  required: true
+                  description: Selected transaction id.
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Selected transaction retrieved successfully.
+                '400':
+                    description: Missing Params. Could not reach api endpoint.
+                '500':
+                    description: Internal server error.
+        delete:
+            tags:
+                - users
+            summary: Delete specific transaction associated with logged in User and selected account.
+            operationId: deleteTransaction
+            security:
+                - bearerAuth: []
+            parameters:
+                - in: path
+                  name: accountId
+                  required: true
+                  description: Selected account id.
+                  schema:
+                      type: string
+                - in: path
+                  name: id
+                  required: true
+                  description: Selected transaction id.
+                  schema:
+                      type: string
+            responses:
+                '200':
+                    description: Selected transaction deleted successfully.
+                '400':
+                    description: Missing Params. Could not reach api endpoint.
+                '500':
+                    description: Internal server error.
+
 components:
     securitySchemes:
         bearerAuth:
@@ -352,6 +471,30 @@ components:
                 isActive:
                     type: boolean
                     example: true
+        addTransaction:
+            type: object
+            required:
+                - name
+                - amount
+                - category
+                - type
+                - date
+            properties:
+                name:
+                    type: string
+                    example: Ford Motors Car Payment
+                amount:
+                    type: number
+                    example: 156
+                category:
+                    type: string
+                    example: hobbies
+                type:
+                    type: string
+                    example: expenses
+                date:
+                    type: string
+                    example: '12/16/2026'
 servers:
     - url: http://wealthtrackit.tech/api
       description: Production server
