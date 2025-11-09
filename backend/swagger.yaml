@@ -352,6 +352,31 @@ paths:
                     description: Missing Params. Could not reach api endpoint.
                 '500':
                     description: Internal server error.
+    /analytics/categories:
+        post:
+            tags:
+                - users
+            summary: Calculate and returns spending analytics.
+            operationId: getCategoryAnalytics
+            security:
+                - bearerAuth: []
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - userId
+                            properties:
+                                userId:
+                                    type: string
+                                    example: bgeiu6232662
+                description: Required Fields for analytics.
+            responses:
+                '200':
+                    description: Returned account spending analytics.
+                '500':
+                    description: Internal server error.
 
 components:
     securitySchemes:
@@ -440,7 +465,6 @@ components:
                 isActive:
                     type: boolean
                     example: true
-
         createAccount:
             type: object
             required:
