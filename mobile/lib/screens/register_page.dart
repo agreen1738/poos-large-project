@@ -1,28 +1,53 @@
 import 'package:flutter/material.dart';
 import 'login_page.dart';
 import '../services/auth_services.dart';
+import 'package:flutter/services.dart';
+import 'dart:math' as math;
 
 // register page
-class RegisterPage extends StatefulWidget{
+class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage>{
+class PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text.replaceAll(RegExp(r'\D'), '');
+
+    if (text.length > 3 && text.length <= 6) {
+      text = '${text.substring(0, 3)}-${text.substring(3)}';
+    } else if (text.length > 6) {
+      text =
+          '${text.substring(0, 3)}-${text.substring(3, 6)}-${text.substring(6, math.min(text.length,10))}';
+    }
+
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
-  
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+
   bool _isLoading = false;
 
   @override
-  void dispose(){
+  void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
@@ -33,18 +58,18 @@ class _RegisterPageState extends State<RegisterPage>{
   }
 
   // email validation
-  String? _validateEmail(String? value){
-    if (value==null || value.isEmpty){
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
       return 'Email is required';
     }
 
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-    if(!emailRegex.hasMatch(value)){
+    if (!emailRegex.hasMatch(value)) {
       return 'Enter a valid email address';
     }
     return null;
   }
-  
+
   // password validation
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
@@ -96,7 +121,6 @@ class _RegisterPageState extends State<RegisterPage>{
       });
 
       try {
-        // Create registration data matching backend expectations
         final registerData = RegisterData(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
@@ -106,14 +130,16 @@ class _RegisterPageState extends State<RegisterPage>{
           confirmPassword: _confirmPasswordController.text,
         );
 
-        // Call register API
+        // call register API
         await authService.register(registerData);
 
-        // Show success message
+        // show success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Registration successful! Please check your email to verify your account before logging in.'),
+              content: Text(
+                'Registration successful! Please check your email to verify your account before logging in.',
+              ),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 5),
             ),
@@ -150,7 +176,7 @@ class _RegisterPageState extends State<RegisterPage>{
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -201,10 +227,7 @@ class _RegisterPageState extends State<RegisterPage>{
                     // subtitle
                     const Text(
                       'Create Your Account',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0XFF757575),
-                      ),
+                      style: TextStyle(fontSize: 16, color: Color(0XFF757575)),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
@@ -216,9 +239,7 @@ class _RegisterPageState extends State<RegisterPage>{
                       enabled: !_isLoading,
                       decoration: InputDecoration(
                         hintText: 'First Name',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
                         fillColor: const Color(0xFF3D3D3D),
                         contentPadding: const EdgeInsets.symmetric(
@@ -242,9 +263,7 @@ class _RegisterPageState extends State<RegisterPage>{
                       enabled: !_isLoading,
                       decoration: InputDecoration(
                         hintText: 'Last Name',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
                         fillColor: const Color(0xFF3D3D3D),
                         contentPadding: const EdgeInsets.symmetric(
@@ -269,9 +288,7 @@ class _RegisterPageState extends State<RegisterPage>{
                       enabled: !_isLoading,
                       decoration: InputDecoration(
                         hintText: 'Email Address',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
                         fillColor: const Color(0xFF3D3D3D),
                         contentPadding: const EdgeInsets.symmetric(
@@ -294,11 +311,13 @@ class _RegisterPageState extends State<RegisterPage>{
                       validator: _validatePhone,
                       keyboardType: TextInputType.phone,
                       enabled: !_isLoading,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        PhoneNumberFormatter(),
+                      ],
                       decoration: InputDecoration(
-                        hintText: 'Phone Number',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
+                        hintText: 'Phone Number (e.g. 123-456-7890)',
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
                         fillColor: const Color(0xFF3D3D3D),
                         contentPadding: const EdgeInsets.symmetric(
@@ -323,9 +342,7 @@ class _RegisterPageState extends State<RegisterPage>{
                       enabled: !_isLoading,
                       decoration: InputDecoration(
                         hintText: 'Password',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
                         fillColor: const Color(0xFF3D3D3D),
                         contentPadding: const EdgeInsets.symmetric(
@@ -350,9 +367,7 @@ class _RegisterPageState extends State<RegisterPage>{
                       enabled: !_isLoading,
                       decoration: InputDecoration(
                         hintText: 'Confirm Password',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
+                        hintStyle: TextStyle(color: Colors.grey[500]),
                         filled: true,
                         fillColor: const Color(0xFF3D3D3D),
                         contentPadding: const EdgeInsets.symmetric(
@@ -388,7 +403,9 @@ class _RegisterPageState extends State<RegisterPage>{
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : const Text(
@@ -409,7 +426,7 @@ class _RegisterPageState extends State<RegisterPage>{
                           'Already have an account? ',
                           style: TextStyle(
                             color: Color(0xFF757575),
-                            fontSize: 14,
+                            fontSize: 11,
                           ),
                         ),
                         TextButton(
@@ -432,7 +449,7 @@ class _RegisterPageState extends State<RegisterPage>{
                             'Login here',
                             style: TextStyle(
                               color: Color(0xFF6E7BF2),
-                              fontSize: 14,
+                              fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

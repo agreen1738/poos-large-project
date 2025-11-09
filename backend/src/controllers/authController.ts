@@ -1,33 +1,28 @@
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import { getDB } from '../database.js';
 import { badRequest, created, internalServerError, unauthorized, okStatus, notFound } from '../utils/messageHandler.js';
 import { Messages } from '../utils/messageHandler.js';
 import type { Request, Response } from 'express';
 import type { User } from '../models/User.js';
 import { ObjectId } from 'mongodb';
+import Brevo from '@getbrevo/brevo';
 
 dotenv.config({ quiet: true });
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-    },
-});
+const brevoClient = new Brevo.TransactionalEmailsApi();
+brevoClient.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY as string);
 
 async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify your account', isResend = false) {
     const verificationToken = jwt.sign({ id: id.toString() }, JWT_SECRET, { expiresIn: '15m' });
-    
+
     // URL encode the token to prevent special characters from breaking the link
     const encodedToken = encodeURIComponent(verificationToken);
     const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${encodedToken}`;
-    
+
     const emailSubject = isResend ? `Resend: ${subject}` : subject;
     const message = `
         <h4>Hi ${user.firstName},</h4>
@@ -36,14 +31,14 @@ async function sendVerificationEmail(user: any, id: ObjectId, subject = 'Verify 
         <a href="${verificationLink}">Verify Account</a>
         <p>This link will expire in 15 minutes.</p>
     `;
-    const result = await transporter.sendMail({
-        from: `'WealthTracker' <${process.env.EMAIL_USER}>`,
-        to: user.email,
+    await brevoClient.sendTransacEmail({
+        sender: { name: 'WealthTracker', email: process.env.SMTP_EMAIL },
+        to: [{ email: user.email }],
         subject: emailSubject,
-        html: message,
+        htmlContent: message,
     });
 
-    return result.accepted;
+    return true;
 }
 
 async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
@@ -56,14 +51,14 @@ async function sendPasswordRecoveryEmail(user: any, resetToken: string) {
         <a href="${passwordResetLink}">Reset Password</a>
         <p>This link will expire in 15 minutes.</p>
     `;
-    const result = await transporter.sendMail({
-        from: `'WealthTracker' <${process.env.EMAIL_USER}>`,
-        to: user.email,
+    await brevoClient.sendTransacEmail({
+        sender: { name: 'WealthTracker', email: process.env.SMTP_EMAIL },
+        to: [{ email: user.email }],
         subject: emailSubject,
-        html: message,
+        htmlContent: message,
     });
 
-    return result.accepted;
+    return true;
 }
 
 async function register(req: Request, res: Response) {

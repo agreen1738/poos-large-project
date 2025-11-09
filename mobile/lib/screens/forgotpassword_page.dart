@@ -1,92 +1,154 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/screens/forgotpassword_page.dart';
-import 'register_page.dart';
-import 'dashboard_page.dart';
-import '../services/auth_services.dart';
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+import '../services/user_services.dart'; // Import the user services
+
+class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _loginController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
+  final _emailController = TextEditingController();
   bool _isLoading = false;
 
-  String? _validateEmail(String? value){
-    if (value == null || value.isEmpty){
-      return 'Email is required';
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your email address';
     }
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
-      return 'Enter a valid email address';
+      return 'Please enter a valid email address';
     }
     return null;
   }
 
-  String? _validatePassword(String? value){
-    if (value == null || value.isEmpty){
-      return 'Password is required';
+  Future<void> _sendResetLink() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
-    if(value.length < 6){
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
 
-  // handle login
-  Future<void> _handleLogin() async {
-    if(_formKey.currentState!.validate()){
-      setState(() {
-        _isLoading = true;
-      });
+    setState(() {
+      _isLoading = true;
+    });
 
-      try{
-        // show success message
-        // create login credentials
-        final credentials = LoginCredentials(
-          login: _loginController.text.trim(),
-          password: _passwordController.text,
-        );
-
-        // call login api
-        final user = await authService.login(credentials);
-        if(mounted){
-          // go to dashboard
-          Navigator.pushReplacement(
-            context, 
-            MaterialPageRoute(builder: (context) => const DashboardPage()),
-          );
-        }
-      } catch(e){
-        // show error message
-        if(mounted){
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString().replaceAll('Exception: ', '')),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 4),
-            )
-          );
-        }
-      } finally{
-        if(mounted){
-          setState((){
-            _isLoading = false;
-          });
-        }
+    try {
+      await userService.sendForgotPasswordEmail(_emailController.text.trim());
+      
+      // Success
+      if (mounted) {
+        _showSuccessDialog();
+      }
+    } catch (error) {
+      print('Password reset error: $error');
+      
+      // Show error message
+      if (mounted) {
+        _showErrorDialog(error.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
-  // UI of login page
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 12),
+              Text('Email Sent'),
+            ],
+          ),
+          content: Text(
+            'A password reset link has been sent to ${_emailController.text}. Please check your email inbox and follow the instructions to reset your password.',
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); 
+                Navigator.of(context).pop(); 
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6E7BF2),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 28),
+              SizedBox(width: 12),
+              Text('Error'),
+            ],
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF6E7BF2),
+              ),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // background
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -122,9 +184,9 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     // Title
                     const Text(
-                      'Wealth\nTracker',
+                      'Forgot\nPassword',
                       style: TextStyle(
-                        fontSize: 48,
+                        fontSize: 38,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF2D2D2D),
                         height: 1.1,
@@ -135,18 +197,19 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Subtitle
                     const Text(
-                      'Manage Your Financial Assets',
+                      'Enter your email address and we\'ll send you a link to reset your password.',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         color: Color(0xFF757575),
+                        height: 1.4,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 40),
 
-                    // Email Address
+                    // Email Address Field
                     TextFormField(
-                      controller: _loginController,
+                      controller: _emailController,
                       validator: _validateEmail,
                       keyboardType: TextInputType.emailAddress,
                       enabled: !_isLoading,
@@ -169,63 +232,11 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       style: const TextStyle(color: Colors.white),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
 
-                    // Password
-                    TextFormField(
-                      controller: _passwordController,
-                      validator: _validatePassword,
-                      obscureText: true,
-                      enabled: !_isLoading,
-                      decoration: InputDecoration(
-                        hintText: 'Password',
-                        hintStyle: TextStyle(
-                          color: Colors.grey[500],
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFF3D3D3D),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 18,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                        errorStyle: const TextStyle(color: Colors.redAccent),
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Forgot Password
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const ForgotPasswordPage(),
-                                    ),
-                                  );
-                              },
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
-                            color: Color(0xFF6E7BF2),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Login button
+                    // Send Reset Link Button
                     ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed: _isLoading ? null : _sendResetLink,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6E7BF2),
                         foregroundColor: Colors.white,
@@ -246,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             )
                           : const Text(
-                              'Login',
+                              'Send Reset Link',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -255,38 +266,37 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Create account link
+                    const Divider(
+                      color: Color(0xFFE0E0E0),
+                      thickness: 1,
+                      height: 32,
+                    ),
+
+                    // Back to Login Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
-                          "Don't have an account? ",
-                          style: TextStyle(
-                            color: Color(0xFF757575),
-                            fontSize: 10,
-                          ),
+                        const Icon(
+                          Icons.arrow_back,
+                          size: 16,
+                          color: Color(0xFF6E7BF2),
                         ),
                         TextButton(
                           onPressed: _isLoading
                               ? null
                               : () {
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const RegisterPage(),
-                                    ),
-                                  );
+                                  Navigator.pop(context);
                                 },
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
+                            padding: const EdgeInsets.only(left: 4),
                             minimumSize: const Size(0, 0),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           child: const Text(
-                            'Create one here',
+                            'Back to Login',
                             style: TextStyle(
                               color: Color(0xFF6E7BF2),
-                              fontSize: 9,
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -301,11 +311,5 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-  }
-  @override
-  void dispose() {
-    _loginController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 }
