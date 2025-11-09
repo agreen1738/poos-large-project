@@ -1,8 +1,8 @@
 swagger: '2.0'
 info:
-    description: API documentation of WealthTracker.
+    description: API documentation of Wealth Tracker API.
     version: 1.0.0
-    title: Swagger Petstore
+    title: Wealth Tracker API Documentation
     contact:
         email: gradimbuyi@outlook.com
 
@@ -11,57 +11,139 @@ info:
         url: https://opensource.org/license/mit
 tags:
     - name: users
-      description: operations available to regular users
+      description: Operations available to regular users
+
+host: wealthtrackit.tech
+basePath: /api
+schemes:
+    - http
+consumes:
+    - application/json
+produces:
+    - application/json
 
 paths:
     /register:
         post:
             tags:
                 - users
-            summary: creates new user
+            summary: Creates a new user.
             operationId: register
-            consumes:
-                - application/json
-            produces:
-                - application/json
             parameters:
                 - in: body
                   name: register
-                  description: |
-                      takes for input user's name, email, and password, then register user.
+                  description: Takes user input (name, email, and password) to register register new account.
                   schema:
                       $ref: '#/definitions/register'
             responses:
                 200:
-                    description: user registered successfully
+                    description: User registered successfully.
                 400:
-                    description: fail to access database
+                    description: Request body or parameters error.
                 500:
-                    description: internal server error
+                    description: Internal server error.
     /login:
         post:
             tags:
                 - users
-            summary: logs in to existing account
+            summary: Logs in to existing account.
             operationId: login
-            consumes:
-                - application/json
-            produces:
-                - application/json
             parameters:
                 - in: body
                   name: login
-                  description: |
-                      logs in to user account if email and password credentials is valid.
+                  description: Logs in a user if email and password credentials is valid.
                   schema:
                       $ref: '#/definitions/login'
             responses:
                 200:
-                    description: returns user token for authentication
+                    description: Returns user token for authentication.
                 400:
-                    description: could not retrieve user info
+                    description: Could not retrieve user info. Request body or parameters error.
                 500:
-                    description: internal server error
+                    description: Internal server error.
+    /verify:
+        post:
+            tags:
+                - users
+            summary: Verify user email.
+            operationId: verifyEmail
+            parameters:
+                - in: query
+                  name: token
+                  required: true
+                  type: string
+                  description: The email verification token sent to the user.
+            responses:
+                200:
+                    description: Changed user's email verification status.
+                400:
+                    description: Failed to change user's email verification status.
+                500:
+                    description: Internal server error.
+    /resend-verification:
+        post:
+            tags:
+                - users
+            summary: Sends verification link to user's email.
+            operationId: resendVerification
+            parameters:
+                - in: body
+                  name: email
+                  type: string
+                  description: The email verification token sent to the user.
+                  schema:
+                      $ref: '#/definitions/resendVerification'
+            responses:
+                200:
+                    description: Verification link sent successfully.
+                400:
+                    description: Invalid format for request body.
+                500:
+                    description: Internal server error.
+    /forgot-password:
+        post:
+            tags:
+                - users
+            summary: Sends user a link to recover their password.
+            operationId: forgotPassword
+            parameters:
+                - in: body
+                  name: email
+                  type: string
+                  description: The user's email address.
+                  schema:
+                      $ref: '#/definitions/password'
+            responses:
+                200:
+                    description: Recovery link sent successfully.
+                400:
+                    description: Invalid format for request body.
+                500:
+                    description: Internal server error.
+    /change-password:
+        post:
+            tags:
+                - users
+            summary: Changs the user's password.
+            operationId: changePassword
+            parameters:
+                - in: query
+                  name: token
+                  type: string
+                  required: true
+                  description: The verification token sent to the user.
+                - in: body
+                  name: email
+                  description: The user's email address.
+                  schema:
+                      $ref: '#/definitions/password'
+            responses:
+                200:
+                    description: Password changed successfully.
+                400:
+                    description: Invalid format for request body. Failed to change password.
+                500:
+                    description: Internal server error.
 
 definitions:
     register:
@@ -105,7 +187,19 @@ definitions:
                 type: string
                 example: test123
 
-host: virtserver.swaggerhub.com
-basePath: /grady-4ce/WealthTracker/1.0.0
-schemes:
-    - https
+    resendVerification:
+        type: object
+        required:
+            - email
+        properties:
+            email:
+                type: string
+                example: gradimbuyi@outlook.com
+    password:
+        type: object
+        required:
+            - email
+        properties:
+            email:
+                type: string
+                example: gradimbuyi@outlook.com
