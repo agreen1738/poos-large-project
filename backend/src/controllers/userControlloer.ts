@@ -29,16 +29,16 @@ async function updateInfo(req: Request, res: Response) {
     console.log('\n╔════════════════════════════════════════╗');
     console.log('║     UPDATE USER INFO - DEBUG           ║');
     console.log('╚════════════════════════════════════════╝');
-    
+
     try {
         console.log('📥 Request body:', JSON.stringify(req.body, null, 2));
-        
+
         const database = getDB();
         const collection = database.collection('User');
         const userId = new ObjectId(req.user!.id);
-        
+
         console.log('🔑 User ID:', userId.toString());
-        
+
         const allowedFields = ['firstName', 'lastName', 'email', 'phone'];
         const fields = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
 
@@ -52,7 +52,7 @@ async function updateInfo(req: Request, res: Response) {
         // Get current user from database
         console.log('🔍 Fetching current user from database...');
         const currentUser = await collection.findOne({ _id: userId });
-        
+
         if (!currentUser) {
             console.log('❌ User not found in database');
             return badRequest(res, Messages.USER + Messages.FAILED);
@@ -60,21 +60,21 @@ async function updateInfo(req: Request, res: Response) {
 
         console.log('👤 Current user email:', currentUser.email);
         console.log('📧 Email from request:', fields.email);
-        
+
         // Check if email is ACTUALLY changing
         const isEmailActuallyChanging = fields.email && fields.email !== currentUser.email;
-        
+
         console.log('🔄 Is email actually changing?', isEmailActuallyChanging);
 
         if (isEmailActuallyChanging) {
             console.log('⚠️  EMAIL IS CHANGING - Will send verification email');
             console.log('   From:', currentUser.email);
             console.log('   To:', fields.email);
-            
+
             // Create user object with NEW email
             const userWithNewEmail = {
                 ...currentUser,
-                email: fields.email
+                email: fields.email,
             };
 
             try {
@@ -82,17 +82,14 @@ async function updateInfo(req: Request, res: Response) {
                 const emailResult = await sendVerificationEmail(userWithNewEmail, userId);
                 console.log('✅ Email sent result:', emailResult);
 
-                if (!emailResult || emailResult.length === 0) {
+                if (!emailResult) {
                     console.error('❌ Failed to send verification email - no recipients');
                     return badRequest(res, 'Failed to send verification email');
                 }
 
                 // Update with new email and set status to Pending
                 console.log('💾 Updating user with new email and Pending status...');
-                const update = await collection.updateOne(
-                    { _id: userId }, 
-                    { $set: { ...fields, status: 'Pending' } }
-                );
+                const update = await collection.updateOne({ _id: userId }, { $set: { ...fields, status: 'Pending' } });
 
                 if (!update.acknowledged) {
                     console.error('❌ Database update failed');
@@ -109,7 +106,7 @@ async function updateInfo(req: Request, res: Response) {
 
         // Email NOT changing - just update other fields
         console.log('✅ Email NOT changing - updating other fields only');
-        
+
         // Remove email from fields if it's the same
         if (fields.email === currentUser.email) {
             console.log('🗑️  Removing unchanged email from update');
@@ -124,10 +121,7 @@ async function updateInfo(req: Request, res: Response) {
         }
 
         console.log('💾 Updating user in database...');
-        const update = await collection.updateOne(
-            { _id: userId }, 
-            { $set: fields }
-        );
+        const update = await collection.updateOne({ _id: userId }, { $set: fields });
 
         if (!update.acknowledged) {
             console.error('❌ Database update failed');
@@ -147,7 +141,7 @@ async function changePassword(req: Request, res: Response) {
     console.log('\n╔════════════════════════════════════════╗');
     console.log('║     CHANGE PASSWORD - DEBUG            ║');
     console.log('╚════════════════════════════════════════╝');
-    
+
     try {
         const bodyLength = Object.keys(req.body).length;
 
@@ -213,10 +207,7 @@ async function changePassword(req: Request, res: Response) {
         console.log('💾 Updating password in database...');
 
         // Update password in database
-        const update = await collection.updateOne(
-            { _id: userId },
-            { $set: { passwordHash: newPasswordHash } }
-        );
+        const update = await collection.updateOne({ _id: userId }, { $set: { passwordHash: newPasswordHash } });
 
         if (!update.acknowledged) {
             console.log('❌ Database update failed');
@@ -225,7 +216,7 @@ async function changePassword(req: Request, res: Response) {
 
         console.log('✅ Password changed successfully!');
         console.log('╚════════════════════════════════════════╝\n');
-        
+
         return updated(res, Messages.NEW_PASSWORD);
     } catch (error) {
         console.error('❌ FATAL ERROR in changePassword:', error);
