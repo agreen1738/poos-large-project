@@ -521,3 +521,58 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .add-account-btn {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .add-account-btn:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+
+.golden-theme .submit-btn {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .submit-btn:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}
+
+/* Golden theme for summary numbers */
+.golden-theme .total-balance h3 {
+  color: #FFD700;
+}
+
+.golden-theme .balance-amount {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.golden-theme .account-count,
+.golden-theme .account-types {
+  color: #FFD700;
+}
+
+/* Golden theme for account card hover */
+.golden-theme .account-card:hover {
+  border-color: #FFD700;
+}
+
+/* Golden theme for modal close button hover */
+.golden-theme .modal-close-btn:hover {
+  color: #FFD700;
+}
+
+/* Golden theme for form inputs focus */
+.golden-theme .form-group input:focus,
+.golden-theme .form-group select:focus {
+  border-color: #FFD700;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+}
+
+/* Golden theme for summary card shadow */
+.golden-theme .summary-card.total-balance {
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
+}

@@ -225,3 +225,13 @@
     flex: 1;
   }
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .total-spending {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .account-selector select:hover,
+.golden-theme .account-selector select:focus {
+  border-color: #FFD700;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+}

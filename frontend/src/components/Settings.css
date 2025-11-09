@@ -357,3 +357,11 @@
     width: 100%;
   }
 }
+/* ===== GOLDEN THEME ===== */
+.golden-theme .save-btn {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+}
+
+.golden-theme .save-btn:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
+}

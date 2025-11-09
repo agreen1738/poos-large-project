@@ -14,6 +14,7 @@ import Accounts from './Accounts';
 function Dashboard() {
   const [user, setUser] = useState<any>(null);
   const [activePage, setActivePage] = useState('dashboard');
+  const [isGoldenTheme, setIsGoldenTheme] = useState(false);
 
   useEffect(() => {
     // Get user data from authService
@@ -23,8 +24,21 @@ function Dashboard() {
     }
   }, []);
 
+  // Toggle theme when isGoldenTheme changes
+  useEffect(() => {
+    if (isGoldenTheme) {
+      document.body.classList.add('golden-theme');
+    } else {
+      document.body.classList.remove('golden-theme');
+    }
+  }, [isGoldenTheme]);
+
   function doLogout() {
     authService.logout();
+  }
+
+  function toggleTheme() {
+    setIsGoldenTheme(!isGoldenTheme);
   }
 
   const renderContent = () => {
@@ -49,7 +63,7 @@ function Dashboard() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-header">
-          <h2>Wealth Tracker</h2>
+          <h2 onClick={toggleTheme} style={{ cursor: 'pointer' }}>Wealth Tracker</h2>
           <p>Hello {user?.firstName || 'User'}!</p>
         </div>
 
