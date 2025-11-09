@@ -20,7 +20,6 @@ async function getAccounts(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const accounts = await collection.find({ userId }, { projection: { userId: 0 } }).toArray();
 
-        // FIXED: Return empty array instead of 400 error when no accounts exist
         return res.status(200).json(accounts);
     } catch (error) {
         return internalServerError(res, error);
@@ -57,7 +56,9 @@ async function createAccount(req: Request, res: Response) {
 
         const { accountName, accountType, accountNumber, accountInstitution, balance } = req.body;
 
-        if (!accountName || !accountType || !accountNumber) return badRequest(res, Messages.MISSING_FIELDS);
+        if (!accountName || !accountType || !accountNumber || !accountInstitution || !balance) {
+            return badRequest(res, Messages.MISSING_FIELDS);
+        }
 
         const userId = new ObjectId(req.user!.id);
         const database = getDB();
@@ -105,9 +106,7 @@ async function deleteAccount(req: Request, res: Response) {
         const accoutnCollection = database.collection('Accounts');
         const transactionCollection = database.collection('Transactions');
 
-        const transaction = await transactionCollection.deleteMany({ accountId: accountId });
-
-        if (transaction.deletedCount === 0) console.log('Account has no transactions');
+        await transactionCollection.deleteMany({ accountId: accountId });
 
         const account = await accoutnCollection.deleteOne({ _id: accountId, userId: userId });
 
@@ -133,7 +132,15 @@ async function updateAccount(req: Request, res: Response) {
         const userId = new ObjectId(req.user!.id);
         const database = getDB();
         const collection = database.collection('Accounts');
-        const allowedFields = ['accountName', 'accountType', 'accountNumber', 'balanace', 'currency', 'isActive'];
+        const allowedFields = [
+            'accountName',
+            'accountType',
+            'accountNumber',
+            'accountInstitution',
+            'balanace',
+            'currency',
+            'isActive',
+        ];
         const fields = Object.fromEntries(Object.entries(req.body).filter(([key]) => allowedFields.includes(key)));
 
         if (Object.keys(fields).length === 0) return badRequest(res, Messages.MISSING_FIELDS);
