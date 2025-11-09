@@ -81,6 +81,8 @@ PORT = 5000                                   # api port value
 MONGO_DB_NAME = WealthTrackerDB               # database name
 MONGO_URI = mongodb+srv://db_user:exampleuri  # database uri
 JWT_SECRET = 47c8bbbd1d8a442926eccc           # jwt secret value
+SMTP_EMAIL = noreply@example.com                # brevo email address
+BREVO_API_KEY = xkeysib-3c1cb704cfe88d2f1b9   # brevo api key
 ```
 
 _Optionals_: Before launching the backend, developers can use the command below to create their JWT secret key. Although the key can be any value, we recommend making it something that's hard to guest.
